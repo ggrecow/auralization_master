@@ -1,0 +1,26 @@
+% ITAOPTITRACKVISUALIZER - GUI to look into itaOptitrack save files
+%
+% A quick way to look into .mat files saved by itaOptitrack class.
+% Supports plots and animation of the position and orientation of the 
+% tracked rigid bodys. 
+% Click in the 2D plot to select the time interval plotted or animated in
+% the 3D Plot.
+%
+%   Examples:
+%   itaOptitrackVisualizer()           - opens the GUI
+%   itaOptitrackVisualizer('file.mat') - opens GUI and loads the 
+%       provided optitrack savefile
+%
+%  See also:
+%   itaOptitrack, itaOrientation
+%
+
+% <ITA-Toolbox>
+% This file is part of the application HRTF_class for the ITA-Toolbox. All rights reserved.
+% You can find the license for this m-file in the application folder.
+% </ITA-Toolbox>
+
+% Author: Hark Braren -- Email: hbr@akustik.rwth-aachen.de
+% Created:  15-Jan-2021
+    
+% Created using Appdesigner - Needs Matlab 2020a or later

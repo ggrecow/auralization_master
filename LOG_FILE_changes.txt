@@ -1,0 +1,40 @@
+
+%% problems and changes when/after auralizing the A320 ATRA data from lothar (original files with FDR flight profile)
+ 
+
+19.11.2024
+
+---------------------------------------------------------------------------------------------------------------------------------------
+- (SOLVED)cutting the data based on the max. SPL of the EMISSION dont make any sense. It only works for imission-based auralization. 
+  A more general approach which shall work for both cases, is to base the trim on the min euclidian distance between source/observer. This is now implemented in the new
+  <trim_data_TimeDistanceBased function> 
+ 
+- problema com velocidade negativa na funcao cutting flight profile (rectangle fail )
+
+- trim time nao ta cortando direito, entao broadband time nao ta redondo e da problema
+
+- trimming algorith has a problem, because it trims the data based on the emission. The assumption is that the emission is higher in the overhead position, 
+  so the trimm is made in the middle of the flight. however,  this asssumption may brakes like in this case, which is not a dep nor app (arremetida), and the
+  aircraft starts to accelerate only in the end, when its already far away.
+----------------------------------------------------------------------------------------------------------------
+
+% 14.11.2024
+
+(REMARK) FDR flight profile with non-uniform time step are tricky to handle, not feasible to cut the flight profile using th current approach using 
+	 TrimTimebins = TrimTime/dt because dr is not constant
+  	 There are also another problems related to the time windows used for the broadband synthesis. 
+	 it is just not feasible to work with non constant dt, this should be avoided
+ 
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+(DONE) comentado : run startup_SQAT_PANAM.m; no codigo principal, q tinha sido introduzido p gerar o .exe
+
+(DONE) incluir close all no final do loop de receivers na funcao principal
+
+(DONE) OB to NB conversion - smoothed curve taken out of the plot 
+
+(DONE) OB to NB conversion - spectrogram graph comparing equal/smoothed distribution was commented out becuase it is unnecessary 
+
+(DONE) wav file name changed to AttenuationTag = ['_FS' sprintf('%.1d',94-AttenuationdB) 'dBSPL']; 
+
+(DONE) getPropagation.m - receiver height is truncated to 1 cm if the original value is 0m. This is because the raay tracing hae difficulties to find a reflection when the receiver
+	is at 0m. Another workaournds where investigate but this was the best compromise for now. See comment on the codes for more info
