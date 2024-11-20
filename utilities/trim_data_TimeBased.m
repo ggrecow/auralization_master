@@ -32,8 +32,8 @@ TrimTimebins = TrimTime/dt; % number of bins required to have <TrimTime>
 
 [max_SPL,idx_max] = max(SPL_vs_time); % find idx of max value
 
-idx_lower = idx_max - TrimTimebins; % idx of TrimTime before the Max. SPL
-idx_upper = idx_max + TrimTimebins; % idx of TrimTime after the Max. SPL
+idx_lower = round(idx_max - TrimTimebins); % idx of TrimTime before the Max. SPL
+idx_upper = round(idx_max + TrimTimebins); % idx of TrimTime after the Max. SPL
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 conv_factor = 1000; % conversion factor (m-->km)
