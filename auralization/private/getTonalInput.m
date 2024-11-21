@@ -150,9 +150,15 @@ switch source
 
                     if isempty( count ) % 1) PANAM has no values for the synthesised tone
 
+                        if i > 1 % Ensure that the case i = 1 is defined to avoid errors. WARNING: This should be done in a more robust manner.
                         % truncate to value of this tone in the previous time-step
                         idx_synthesised2panam( B, i ) = idx_synthesised2panam( B, i-1 ); % WARNING: this may not work always, a better solution needs to be figured out
+                        else
+                        end
 
+                        if idx_synthesised2panam( B, i ) == 0 
+                            idx_synthesised2panam( B, i ) = 1; % WARNING: This is just a way to avoid indexing errors - It should be improved
+                        end 
                         % get SPL (predicted from PANAM) of the 1/3-OB containing the calculated freq of the tone
                         SPL_buzzsaw = tones( idx_synthesised2panam( B, i ), 2 );
 
