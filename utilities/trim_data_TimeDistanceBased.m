@@ -75,13 +75,13 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
     line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
     
-    xlabel('PANAM receiver time, $t_{\mathrm{P,i}}$ (s)','Interpreter','Latex');
-    ylabel('SPL, $L_{\mathrm{p,Z}}$ (dB re 20 $\mu$Pa)','Interpreter','Latex');
+    xlabel('Source time, $t_{\mathrm{s}}$ (s)','Interpreter','Latex');
+    ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
     
     legend('PANAM input data',...
         'Point of min. distance between source/receiver',...
         sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt ),...
-        'Location','Best');
+        'Location','northoutside');
     
     ylim([ymin max(SPL_vs_time)  + 5]);
     
@@ -112,11 +112,12 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
     
     plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+    b = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
     
-    legend('PANAM input: altitude','Location','Best');
+    legend(b, sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt ),...
+        'Location','northoutside');
     
-    xlabel('Distance, $x$~(km)','Interpreter','Latex');
+    xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
     
     set(gcf,'color','w');
@@ -162,13 +163,13 @@ else % trim is possible
     plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
     line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
     
-    xlabel('PANAM receiver time, $t_{\mathrm{P,i}}$ (s)','Interpreter','Latex');
+    xlabel('Source time, $t_{\mathrm{s}}$ (s)','Interpreter','Latex');
     ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
     
     legend('PANAM input data',...
         'Point of min. distance between source/receiver',...
         sprintf('Total auralization time is %.4g (s)', 2*TrimTime),...
-        'Location','S');
+        'Location','northoutside');
     
     ylim([ymin max(SPL_vs_time)  + 5]);
     
@@ -200,11 +201,12 @@ else % trim is possible
     % rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
     
     plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+    b = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
     
-    legend('PANAM input: altitude','Location','Best');
+    legend(b, sprintf('Total auralization time is %.4g (s)', 2*TrimTime ),...
+        'Location','northoutside');
     
-    xlabel('Distance, $x$~(km)','Interpreter','Latex');
+    xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
     
     set(gcf,'color','w');
