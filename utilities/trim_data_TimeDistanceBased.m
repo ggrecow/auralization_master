@@ -112,10 +112,14 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
     
     plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    b = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-    
-    legend(b, sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt ),...
-        'Location','northoutside');
+    a = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor,'o' );
+    b = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,'*' ); % receiver position
+    c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+ 
+        legend([a, b, c], {'Point of min. distance between source/receiver',...
+                                   'Receiver position',...
+                        sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt )},...
+                                   'Location','northoutside');
     
     xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
@@ -198,13 +202,17 @@ else % trim is possible
     ymin = 0;
     ymax = (max( (input_4.z)./conv_factor ) ) + 5./conv_factor;
     
-    % rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
     
     plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    b = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-    
-    legend(b, sprintf('Total auralization time is %.4g (s)', 2*TrimTime ),...
-        'Location','northoutside');
+    a = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor,'o' );
+    b = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,'*' ); % receiver position
+    c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+ 
+    legend([a, b, c], {'Point of min. distance between source/receiver',...
+                              'Receiver position',...
+                   sprintf('Total auralization time is %.4g (s)', 2*TrimTime )},...
+                              'Location','northoutside');
     
     xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
