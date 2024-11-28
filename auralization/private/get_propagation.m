@@ -169,7 +169,7 @@ tic;
 
 art = AtmosphericRayTracer; % declare AtmosphericRayTracer class
 
-art.maxReceiverRadius = 0.01; % Maximum value for receiver radius [m]
+art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
 % art.integrationTimeStep = 0.01;
 % art.maxAngleForGeomSpreading = 0.001;    %Maximimum delta angle of initial direction of neighboring rays used for the calculation of the spreading loss [°]
         
@@ -214,7 +214,11 @@ for i = 1:size(source,1)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % total propagation distance of the ground reflected ray [m]
-    propDistanceReflectedRay(i) =  eigenrays(i,2).pathLength();
+    propDistanceReflectedRay(i) =  eigenrays(i, 2).pathLength(); 
+
+    % launch angle - original data convention is: 0° points upwards (northpole) and 180° downwards (southpole). Here we use: 0° (east) and 180° (west)
+    launchAngle_direct(i) = eigenrays(i,1).n0.theta_deg + convertAngle;
+    launchAngle_reflected(i) = eigenrays(i,2).n0.theta_deg + convertAngle;
 
     propagationModel.groundReflectionFactor = get_ground_reflection_coefficient( propagationModel.frequencyVector,... % freq (row) vector
                                                                                                sigma_e, ... % effective flow resistance [kPa/m^2.s]
@@ -303,10 +307,34 @@ if show == 1
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
+    %% plot theta launch
+
+    h  = figure;
+    set(h, 'name', 'PROCESSING - launch direction from ART' );
+    set(h,'Units','Inches');
+    pos = get(h,'Position');
+    set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
+
+    plot( xx, launchAngle_direct ); hold on;
+    plot( xx, launchAngle_reflected,'--');
+    ylabel( 'Emission angle, $\alpha^{*}$ (deg)', 'Interpreter', 'Latex' );
+    xlabel( 'Time, $t$ (s)','Interpreter','Latex' );
+    set( gcf,'color','w' );
+
+    legend('Direct path', 'Reflected path');
+
+    if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
+    else
+        filename = strcat(tag_auralization, '_ART_emission_angle');
+        save_pdf = 1; save_png = 0;
+        export_figures( filename, save_mat_fig, save_png, save_pdf );
+    end
+
     %% Plot freq vs. 1 (arbitrarly chosen) time step using ita toolbox 
     
     % overhead_idx = round(length(TF)/2); % one source/receiver combination
-    [~, overhead_idx] =  min(propDistanceReflectedRay); % one source/receiver combination (overhead aircraft position)
+    % [~, overhead_idx] =  min(propDistanceReflectedRay); % one source/receiver combination (overhead aircraft position)
+    [~, overhead_idx] =  max(rad2deg (thetaReflectedRay)); % one source/receiver combination (overhead aircraft position)
 
     % % plot using ita toolbox
     % allTFs = TF{ overhead_idx ,1 }; % ita_merge(individualTFs, combinedTF);
