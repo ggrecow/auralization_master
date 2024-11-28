@@ -181,8 +181,8 @@ art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
 TF = cell (size(source,1),1); % pre allocate memory
 thetaReflectedRay = zeros(size(source,1),1);
 propDistanceReflectedRay = zeros(size(source,1),1);
-launchAngle_direct = zeros(size(source,1),1);
-launchAngle_reflected = zeros(size(source,1),1);
+launchAngle_direct = zeros(1, size(source,1));
+launchAngle_reflected = zeros(1, size(source,1));
 
 for i = 1:size(source,1)
     
