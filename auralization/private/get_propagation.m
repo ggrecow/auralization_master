@@ -1,5 +1,5 @@
-function TF = get_propagation(input, receiver, nfft, time, show, tag_auralization)
-% function TF = get_propagation(input, receiver, nfft, time, show, tag_auralization)
+function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+% function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
 % its flight trajectory (as is from PANAM input, without any interpolation) and the receiver position.
@@ -46,6 +46,11 @@ function TF = get_propagation(input, receiver, nfft, time, show, tag_auralizatio
 %
 %       time : vector
 %       auralization time vector (used only for plotting)
+%
+%       emission_angle_panam : struct
+%       contain the emission angles from PANAM. Only used to plot a
+%       comparison with the emission angles from ART
+%
 %
 %   show : logical (boolean)
 %   optional parameter for figures (results) display
@@ -176,6 +181,8 @@ art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
 TF = cell (size(source,1),1); % pre allocate memory
 thetaReflectedRay = zeros(size(source,1),1);
 propDistanceReflectedRay = zeros(size(source,1),1);
+launchAngle_direct = zeros(size(source,1),1);
+launchAngle_reflected = zeros(size(source,1),1);
 
 for i = 1:size(source,1)
     
@@ -216,9 +223,14 @@ for i = 1:size(source,1)
     % total propagation distance of the ground reflected ray [m]
     propDistanceReflectedRay(i) =  eigenrays(i, 2).pathLength(); 
 
-    % launch angle - original data convention is: 0° points upwards (northpole) and 180° downwards (southpole). Here we use: 0° (east) and 180° (west)
-    launchAngle_direct(i) = eigenrays(i,1).n0.theta_deg + convertAngle;
-    launchAngle_reflected(i) = eigenrays(i,2).n0.theta_deg + convertAngle;
+    % launch angle - original data convention (spherical coordinate) is: 0° points upwards (northpole) and 180° downwards (southpole). Here we use: 0° (east) and 180° (west)
+%     launchAngle_direct(i) = eigenrays(i,1).n0.theta_deg - 90;
+%     launchAngle_reflected(i) = eigenrays(i,2).n0.theta_deg -90 ;
+
+    % launch angle - original data convention (polar coordinate) is (i think): 0° (west) and 180° downwards (east), increasing counterclockwise. Here we use: 0° (east) and 180° (west), increasing clockwise
+    launchAngle_direct(i) = 360 - eigenrays(i,1).n0.alpha_deg;
+    launchAngle_reflected(i) = 360 - eigenrays(i,2).n0.alpha_deg;
+
 
     propagationModel.groundReflectionFactor = get_ground_reflection_coefficient( propagationModel.frequencyVector,... % freq (row) vector
                                                                                                sigma_e, ... % effective flow resistance [kPa/m^2.s]
@@ -290,7 +302,7 @@ if show == 1
 
     yyaxis left
     plot( xx, rad2deg (thetaReflectedRay) );
-    ylabel( 'Reflection angle, $\theta$ (deg)', 'Interpreter', 'Latex' );
+    ylabel( 'Incidence angle, $\theta_{\mathrm{in}}$ (deg)', 'Interpreter', 'Latex' );
     set( gcf,'color','w' );
 
     % plot propagated distance reflected ray 
@@ -315,13 +327,23 @@ if show == 1
     pos = get(h,'Position');
     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
 
-    plot( xx, launchAngle_direct ); hold on;
-    plot( xx, launchAngle_reflected,'--');
+    yyaxis left
+    a = plot( xx, emission_angle_panam.phix, '-'); hold on;
+    b = plot( xx, launchAngle_direct, '--x' ); hold on;
+    % plot( xx, launchAngle_reflected,'--');
     ylabel( 'Emission angle, $\alpha^{*}$ (deg)', 'Interpreter', 'Latex' );
-    xlabel( 'Time, $t$ (s)','Interpreter','Latex' );
-    set( gcf,'color','w' );
 
-    legend('Direct path', 'Reflected path');
+    b.MarkerIndices = 1:10:length(launchAngle_direct);
+
+    % diference between panam and art (direct path)
+    yyaxis right
+    plot( xx, launchAngle_direct - emission_angle_panam.phix );
+    xlabel('Time, $t$ (s)','Interpreter','Latex' );
+    ylabel('$\alpha^{*}_\mathrm{ART}- \alpha^{*}_\mathrm{PANAM}$ (deg)','Interpreter','Latex' );
+    legend([a,b], {'PANAM', 'ART - direct path'}, 'Location', 'SE' );
+    legend box off;
+
+    set( gcf,'color','w');
 
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
