@@ -214,7 +214,7 @@ for i = 1:size(source,1)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % total propagation distance of the ground reflected ray [m]
-    propDistanceReflectedRay(i) =  eigenrays(i, 2).r.r(1);
+    propDistanceReflectedRay(i) =  eigenrays(i,2).pathLength();
 
     propagationModel.groundReflectionFactor = get_ground_reflection_coefficient( propagationModel.frequencyVector,... % freq (row) vector
                                                                                                sigma_e, ... % effective flow resistance [kPa/m^2.s]
