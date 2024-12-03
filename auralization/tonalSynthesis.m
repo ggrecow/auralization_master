@@ -64,30 +64,47 @@ tonesSPLTime = input.tonesSPLTime;
 
 %% check plot (input data) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if show == true
+
     figure('name',['INPUT - Tonal content from PANAM - ' input_type ' - ' tag_source]);
     h  = gcf;
     set(h,'Units','Inches');
     pos = get(h,'Position');
     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
 
-    subplot(2,1,1); plot(time_PANAM,tonesSPLTime);
-    ylabel('SPL, $L_{\mathrm{p,Z}}$ (dB)','Interpreter','Latex');
-    l=legend('Tone 1','Tone 2','Tone 3','Tone 4','Tone 5'); set(l,'Orientation','horizontal','Location','northoutside');
+    for nTones = 1:tones % loop over the number of tones i-th source_time steps
+
+        subplot(2,1,1); plot(time_PANAM,tonesSPLTime(nTones,:)); hold on;
+        ylabel('SPL, $L_{\mathrm{p,Z}}$ (dB)','Interpreter','Latex');
+
+    end
+
+    switch tag_source
+        case  'fan_harmonics'
+            l=legend('Tone 1','Tone 2','Tone 3','Tone 4','Tone 5'); set(l,'Orientation','horizontal','Location','northoutside');
+        case  'buzzsaw'
+            l=legend( sprintf('Buzzsaw tones - K = %g',tones)); set(l,'Orientation','horizontal','Location','northoutside');
+    end
+
+
     legend box off;
-    
-    subplot(2,1,2); plot(time_PANAM,tonesFreqTime./1000);        
-    xlabel('PANAM receiver time (trimmed), $t^*_{\mathrm{P,i}}$ (s)','Interpreter','Latex');
-    ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
-    
+
+    for nTones = 1:tones % loop over the number of tones i-th source_time steps
+
+        subplot(2,1,2); plot(time_PANAM,tonesFreqTime(nTones,:)./1000); hold on;
+        xlabel('PANAM receiver time (trimmed), $t^*_{\mathrm{P,i}}$ (s)','Interpreter','Latex');
+        ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
+
+    end
+
     set(gcf,'color','w');
-    
+
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization,  '_tonalContent_PANAM_', tag_source);
         save_pdf = 1; save_png = 0;
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
-    
+
 else
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
