@@ -69,6 +69,9 @@ function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam,
 %       combination of both eigenrays, respectively.  
 %
 % Author: Gil Felix Greco, Braunschweig 08.12.2023
+% Author: Gil Felix Greco, Braunschweig 04.03.2025 - included plots of angles in
+% spherical coordinates (those are already converted to be used for HRTFs
+% (Fabian database convention)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -146,22 +149,26 @@ nBins = ceil( (nfft+1)/2) ;     % calculate the number of unique fft points
 freq = linspace(0, fs/2, nBins); % freq vector
 propagationModel.frequencyVector = freq;
 
-%% ground reflection
-% The ground reflection factor is required for the transfer function
-% calculation. It is 1 by default. It can either be a singe value or a
-% complex-valued vector with same length as the frequency vector.
+%% Calculate Eigenrays and tranfer function
+tic;
 
-% propagationModel.groundReflectionFactor = 0.9 * ones(size(propagationModel.frequencyVector));
+art = AtmosphericRayTracer; % declare AtmosphericRayTracer class
 
-% sigma_e_dict = {
-%     'snow': 25.,
-%     'forest': 50.,
-%     'grass': 250.,
-%     'dirt_roadside': 500.,
-%     'dirt': 5000,
-%     'asphalt': 10000,
-%     'concrete': 50000
-%     }
+% define ray-tracing parameters
+art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
+% art.integrationTimeStep = 0.01;
+% art.maxAngleForGeomSpreading = 0.001;    %Maximimum delta angle of initial direction of neighboring rays used for the calculation of the spreading loss [°]
+        
+% initialize vectors
+TF = cell (size(source,1),1);  
+thetaReflectedRay = zeros(size(source,1),1);
+propDistanceReflectedRay = zeros(size(source,1),1);
+launchAngle_direct = zeros(1, size(source,1));
+launchAngle_reflected = zeros(1, size(source,1));
+launchAngle_direct_spherical = zeros(size(source,1), 2);
+launchAngle_reflected_spherical = zeros(size(source,1), 2);
+
+% define parameters used for ground reflection
 
 % effective flow resistance [kPa/m^2.s]
 sigma_e = str2double( input_file.sigma_e );  
@@ -169,68 +176,44 @@ sigma_e = str2double( input_file.sigma_e );
 % coarse approximation of sound speed as a function of temperature for ground reflection calculation
 soundSpeed = 331.3 + (temperatureCelsius * 0.606);  % This still needs to be tested for the case when temperature profiles are considered.
 
-%% Calculate Eigenrays and tranfer function
-tic;
-
-art = AtmosphericRayTracer; % declare AtmosphericRayTracer class
-
-art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
-% art.integrationTimeStep = 0.01;
-% art.maxAngleForGeomSpreading = 0.001;    %Maximimum delta angle of initial direction of neighboring rays used for the calculation of the spreading loss [°]
-        
-TF = cell (size(source,1),1); % pre allocate memory
-thetaReflectedRay = zeros(size(source,1),1);
-propDistanceReflectedRay = zeros(size(source,1),1);
-launchAngle_direct = zeros(1, size(source,1));
-launchAngle_reflected = zeros(1, size(source,1));
-
+% start Eigenray calculation for each i-th source/receiver combinations
 for i = 1:size(source,1)
     
     % Calculate Eigenrays
-    eigenrays(i,:) = art.FindEigenrays(atmos, source(i,:), receiver);
-    
+    eigenrays(i,:) = art.FindEigenrays(atmos, source(i,:), receiver);    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % ground reflection
+    % Calculate ground reflection
     % The ground reflection factor is required for the transfer function
     % calculation. It is 1 by default. It can either be a singe value or a
     % complex-valued vector with same length as the frequency vector.
 
+    % propagationModel.groundReflectionFactor = 0.9 * ones(size(propagationModel.frequencyVector)); % example from template
+
+    % sigma_e_dict = {
+    %     'snow': 25.,
+    %     'forest': 50.,
+    %     'grass': 250.,
+    %     'dirt_roadside': 500.,
+    %     'dirt': 5000,
+    %     'asphalt': 10000,
+    %     'concrete': 50000
+    %     }
+
     % find idx corresponding to reflection coordinate (i.e. point where reflected ray meets the ground at z = 0)
     idx_reflection = find( eigenrays(i, 2).r.z == 0 );  
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % (this will lead to reflected angle)
-
-    % % distance between reflection (at z=0) and receiver, i.e. hypotenuse  
-    % hypotenuse = norm( receiver - eigenrays(i, 2).r.cart(idx_reflection,:) );  
-    % 
-    %  % angle theta between the ground plane and the ground reflected path [rad]
-    % thetaReflectedRay(i) = asin( norm( receiver ) / hypotenuse ); 
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % (this will lead to incident angle)
+    %%%%%%%%%%%%%%%%%%%%
+    % get incident angle of the reflected ray
     
     % distance between reflection (at z=0) and receiver, i.e. hypotenuse 
-    % hypotenuse = norm( source(i,:) - eigenrays(i, 2).r.cart(idx_reflection,:) );  
     hypotenuse = norm( eigenrays(i, 2).r.cart(idx_reflection,:) - source(i,:)  );  
 
     % angle theta between the ground plane and the ground reflected path [rad]
-    % thetaReflectedRay(i) = asin( norm( source(i,:) ) / hypotenuse ); 
     thetaReflectedRay(i) = asin( norm( source(i,3) ) / hypotenuse ); 
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
     % total propagation distance of the ground reflected ray [m]
     propDistanceReflectedRay(i) =  eigenrays(i, 2).pathLength(); 
-
-    % launch angle - original data convention (spherical coordinate) is: 0° points upwards (northpole) and 180° downwards (southpole). Here we use: 0° (east) and 180° (west)
-%     launchAngle_direct(i) = eigenrays(i,1).n0.theta_deg - 90;
-%     launchAngle_reflected(i) = eigenrays(i,2).n0.theta_deg -90 ;
-
-    % launch angle - original data convention (polar coordinate) is (i think): 0° (west) and 180° downwards (east), increasing counterclockwise. Here we use: 0° (east) and 180° (west), increasing clockwise
-    launchAngle_direct(i) = 360 - eigenrays(i,1).n0.alpha_deg;
-    launchAngle_reflected(i) = 360 - eigenrays(i,2).n0.alpha_deg;
-
 
     propagationModel.groundReflectionFactor = get_ground_reflection_coefficient( propagationModel.frequencyVector,... % freq (row) vector
                                                                                                sigma_e, ... % effective flow resistance [kPa/m^2.s]
@@ -238,6 +221,7 @@ for i = 1:size(source,1)
                                                                                                propDistanceReflectedRay(i), ...   % total propagation distance of the ground reflected ray [m]
                                                                                                soundSpeed );
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Transfer function
     % The transfer function (TF) is calculated for each eigenray individually and
     % then combined using the priciple of superposition.
@@ -248,6 +232,65 @@ for i = 1:size(source,1)
     [ combinedTF, individualTFs ] = propagationModel.TransferFunction( eigenrays(i,:) );
     TF{i,1} =  ita_merge( individualTFs, combinedTF );
     
+     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Get angles for HRTF
+    
+    % launch angle (i.e. from the source perspective) -  phi is the azimuth angle and theta is the elevation angle
+    % original data convention from ITA/ART (spherical coordinates): theta = 0° points upwards (northpole)
+    % and 180° downwards (southpole) increasing clockwise. After 180°
+    % (southpole), decreases value until   0° points upwards (northpole)
+    
+     % ART/ ITA
+     % AZIMUTH                         +y - phi = 90                            | ELEVATION                         +z-axis - theta = 0
+     %                                            |                                             |                                                |
+     %   phi = 180 -x-axis    - - Source - ->   +x-axis - phi = 0     |      Theta = 90  -x-axis   - - Source- - > +x-axis - theta = 90
+     %                                            |                                             |                                                |
+     %                                          -y - phi = 270                           |                                              -z-axis - theta = 180
+
+    % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.17743/jaes.2017.0033) 
+    % Fabian angle convention is receiver-based (spherical coordinates): theta = 0°  alligns
+    % with x-axis and increases till 90° points upwards (northpole). After
+    % that, decrease till
+
+     % FABIAN database
+     % AZIMUTH                         +y - phi = 90 (left ear)             |   ELEVATION                               +z-axis - theta = 90 (top of the head)
+     %                                            |                                            |                                                        |
+     %   phi = 180 -x-axis    - - Receiver - ->   +x-axis - phi = 0   |    (back) Theta =  0  -x-axis   - - Receiver- - > +x-axis - theta = 0 (front)
+     %                                            |                                            |                                                        |
+     %                                          -y - phi = 270                          |                                                      -z-axis - theta = -90
+
+    if  eigenrays(i,1).phi >= 180
+        launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi - 180 , eigenrays(i,1).theta - 90];
+    elseif eigenrays(i,1).phi < 180
+        launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi + 180 , eigenrays(i,1).theta - 90];
+    end
+
+    % get angles of the reflected ray
+    % distance between reflection (at z=0) and receiver, i.e. hypotenuse  
+    % hypotenuse_reflected = norm( eigenrays(i, 2).r.cart(idx_reflection,:) - receiver  );  
+    hypotenuse_reflected = norm(  receiver - eigenrays(i, 2).r.cart(idx_reflection,:)  );  
+
+    %  angle between the ground plane and the ground reflected path [deg]
+    thetaReflected = rad2deg ( asin( receiver(3)  / hypotenuse_reflected ) ); 
+
+    if  eigenrays(i,2).phi >= 180
+        launchAngle_reflected_spherical(i,:) = [ eigenrays(i,2).phi - 180 ,  - thetaReflected ];
+    elseif eigenrays(i,1).phi < 180
+        launchAngle_reflected_spherical(i,:) = [ eigenrays(i,2).phi + 180 ,  - thetaReflected ];
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Get launch angles to compare with the ones from PANAM
+    % launch angle - angle convention from (https://doi.org/10.1250/ast.5.165): 0° (west) and 180° downwards (east), increasing counterclockwise. Here we use: 0° (east) and 180° (west), increasing clockwise
+    % !!! NOT 100% SURE WHETHER COORDINATE SYSTEMS ARE EQUIVALENT !!!
+
+    launchAngle_direct(i) = 360 - eigenrays(i,1).n0.alpha_deg;
+    launchAngle_reflected(i) = 360 - eigenrays(i,2).n0.alpha_deg;
+    % launchAngle_direct(i) = mod( - eigenrays(i,1).n0.alpha_deg, 360); % same results as above
+    % launchAngle_reflected(i) = mod( - eigenrays(i,2).n0.alpha_deg, 360);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 end
 
 clear idx_reflection hypotenuse;
@@ -260,6 +303,10 @@ if show == 1
         
     % time vector
     xx = time;
+
+    % overhead_idx = round(length(TF)/2); % one source/receiver combination
+    % [~, overhead_idx] =  min(propDistanceReflectedRay); % one source/receiver combination (overhead aircraft position)
+    [~, overhead_idx] =  max(rad2deg (thetaReflectedRay)); % one source/receiver combination (overhead aircraft position)
 
     % eigenrays.plot(); % ART function - blackbox plot function from ART
     % PLOT_eigenrays(receiver, source, eigenrays); % self-programmed plot eigenrays function
@@ -292,7 +339,7 @@ if show == 1
     % tag_title =  'OUTPUT - transfer function (direct path + 1st order reflection)';
     % PLOT_transfer_function(xx, freq, att_combined, tag_title)
 
-    %% plot theta
+    %% plot incidence angle theta and propagation distance of the reflected ray
 
     h  = figure;
     set(h, 'name', 'PROCESSING - 1st order reflection from ART (theta and propagation distance)' );
@@ -319,7 +366,7 @@ if show == 1
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
-    %% plot theta launch
+    %% plot - compare launch angles from PANAM and ART
 
     h  = figure;
     set(h, 'name', 'PROCESSING - launch direction from ART' );
@@ -352,12 +399,120 @@ if show == 1
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
+    %% plot angles of direct ray in spherical coordinates (FABIAN database - angles used for HRTF)
+
+    h  = figure;
+    set(h, 'name', 'PROCESSING - launch direction from ART in spherical coord (direct) ' );
+    set(h,'Units','Inches');
+    pos = get(h,'Position');
+    set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
+
+    tiledlayout("vertical")
+
+    % first tile - azimuth angle
+    ax1 = nexttile;
+    plot( xx, launchAngle_direct_spherical(:,1), '-'); hold on;
+    xline( xx(overhead_idx), 'k--' );
+
+    ylim([0 360]);
+    yticks([0 90 180 270 360]);
+    ylabel( 'Azimuth (deg)', 'Interpreter', 'Latex' );
+
+    % xlabel( 'Time (s)', 'Interpreter', 'Latex' );
+    xticklabels(""); % Remove x axis numbering
+
+    ax1.Title.Interpreter = 'Latex';
+    ax1.Title.String = 'Spherical coordinates';
+    ax1.Title.FontWeight = 'normal';
+    ax1.XGrid = 'on';
+    ax1.YGrid = 'on';
+    ax1.GridLineStyle = '--';
+    ax1.GridAlpha = 0.15;
+
+% second tile - elevation angle
+    ax2 = nexttile;
+    plot( xx, launchAngle_direct_spherical(:,2), '-'); hold on;
+    a = xline( xx(overhead_idx), 'k--' );
+
+    ylim([0 90]);          
+    yticks([0 30 60 90]);
+    ylabel( 'Elevation (deg)', 'Interpreter', 'Latex' );
+    xlabel( 'Time (s)', 'Interpreter', 'Latex' );
+    
+    ax2.XGrid = 'on';
+    ax2.YGrid = 'on';
+    ax2.GridLineStyle = '--';
+    ax2.GridAlpha = 0.15;
+
+    legend(a , 'Overhead', 'Location', 'NE');
+
+    set( gcf,'color','w');
+
+    if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
+    else
+        filename = strcat(tag_auralization, '_ART_emission_angle_spherical_direct_path');
+        save_pdf = 1; save_png = 0;
+        export_figures( filename, save_mat_fig, save_png, save_pdf );
+    end
+
+    %% plot  angles of reflected ray in spherical coordinates (FABIAN database - angles used for HRTF)
+
+    h  = figure;
+    set(h, 'name', 'PROCESSING - launch direction from ART in spherical coord (reflection) ' );
+    set(h,'Units','Inches');
+    pos = get(h,'Position');
+    set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
+
+    tiledlayout("vertical")
+
+    % first tile - azimuth angle
+    ax1 = nexttile;
+    plot( xx, launchAngle_reflected_spherical(:,1), '-'); hold on;
+    xline( xx(overhead_idx), 'k--' );
+
+    ylim([0 360]);
+    yticks([0 90 180 270 360]);
+    ylabel( 'Azimuth (deg)', 'Interpreter', 'Latex' );
+
+    % xlabel( 'Time (s)', 'Interpreter', 'Latex' );
+    xticklabels(""); % Remove x axis numbering
+
+    ax1.Title.Interpreter = 'Latex';
+    ax1.Title.String = 'Spherical coordinates';
+    ax1.Title.FontWeight = 'normal';
+    ax1.XGrid = 'on';
+    ax1.YGrid = 'on';
+    ax1.GridLineStyle = '--';
+    ax1.GridAlpha = 0.15;
+
+% second tile - elevation angle
+    ax2 = nexttile;
+    plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
+    a = xline( xx(overhead_idx), 'k--' );
+
+    ylim([-90 0]);          
+    yticks([0 -30 -60 -90]);
+    ylabel( 'Elevation (deg)', 'Interpreter', 'Latex' );
+    xlabel( 'Time (s)', 'Interpreter', 'Latex' );
+    
+    ax2.XGrid = 'on';
+    ax2.YGrid = 'on';
+    ax2.GridLineStyle = '--';
+    ax2.GridAlpha = 0.15;
+
+    legend(a , 'Overhead', 'Location', 'NE');
+
+    set( gcf,'color','w');
+
+    if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
+    else
+        filename = strcat(tag_auralization, '_ART_emission_angle_spherical_reflected_path');
+        save_pdf = 1; save_png = 0;
+        export_figures( filename, save_mat_fig, save_png, save_pdf );
+    end
+
     %% Plot freq vs. 1 (arbitrarly chosen) time step using ita toolbox 
     
-    % overhead_idx = round(length(TF)/2); % one source/receiver combination
-    % [~, overhead_idx] =  min(propDistanceReflectedRay); % one source/receiver combination (overhead aircraft position)
-    [~, overhead_idx] =  max(rad2deg (thetaReflectedRay)); % one source/receiver combination (overhead aircraft position)
-
     % % plot using ita toolbox
     % allTFs = TF{ overhead_idx ,1 }; % ita_merge(individualTFs, combinedTF);
     % allTFs.channelNames = {'Direct path TF', 'Ground reflection TF', 'Combined TF'};
