@@ -491,7 +491,7 @@ if show == 1
     a = xline( xx(overhead_idx), 'k--' );
 
     ylim([-90 0]);          
-    yticks([0 -30 -60 -90]);
+    yticks([-90 -60 -30 0]);
     ylabel( 'Elevation (deg)', 'Interpreter', 'Latex' );
     xlabel( 'Time (s)', 'Interpreter', 'Latex' );
     
