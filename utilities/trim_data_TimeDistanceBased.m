@@ -1,4 +1,4 @@
-function [idx_lower, idx_upper] = trim_data_TimeDistanceBased(input, TrimTime, input_4, tag_auralization)
+function [idx_lower, idx_upper] = trim_data_TimeDistanceBased(input, TrimTime, input_4, tag_auralization, ptag)
 %
 % function [idx_lower, idx_upper] = trim_data_TimeBased(input, TrimTime, input_4, tag_auralization)
 %
@@ -31,7 +31,7 @@ end
  dt = time(2) - time(1); % get dt from time vector. Assumes a constant dt
 TrimTimebins = TrimTime/dt; % number of bins required to have <TrimTime>
 
-% [max_SPL,idx_max] = max(SPL_vs_time); % find idx of max value
+[max_SPL,idx_max] = max(SPL_vs_time); % find idx of max value
 [min_dist, idx_min_dist] = min(dist); % find idx of max value
 
 idx_lower = round( idx_min_dist - TrimTimebins); % idx of TrimTime before the min. distance
@@ -39,6 +39,13 @@ idx_upper = round( idx_min_dist + TrimTimebins); % idx of TrimTime after the min
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 conv_factor = 1000; % conversion factor (m-->km)
+
+switch ptag
+    case 'emission'
+        xtag = 'Source time, $t_\mathrm{s}$ (s)' ;
+    case 'immission'
+        xtag = 'Receiver time, $t_\mathrm{r}$ (s)' ;
+end
 
 if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the input signal's time
     
@@ -68,21 +75,41 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     xmax = time(idx_upper) - time(idx_lower);
     ymin = min(SPL_vs_time);
     ymax = (max(SPL_vs_time) - min(SPL_vs_time) ) + 5;
-    
-    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-    
-    plot( time, SPL_vs_time ); hold on;
-    plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-    
-    xlabel('Source time, $t_{\mathrm{s}}$ (s)','Interpreter','Latex');
+      
+    switch ptag
+        case 'emission'
+
+            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+
+            plot( time, SPL_vs_time ); hold on;
+            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+
+            legend('PANAM input data',...
+                'Point of min. distance between source/receiver',...
+                sprintf('Total auralization time is %.4g s', (dt*length(time)) - dt ),...
+                'Location','northoutside');
+
+        case 'immission'
+
+            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+
+            plot( time, SPL_vs_time ); hold on;
+            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+            plot( time(idx_max), SPL_vs_time(idx_max),'*' );
+            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+
+            legend('PANAM input data',...
+                'Point of min. distance between source/receiver',...
+                sprintf('Max. SPL: $L_\\mathrm{max}$ %.4g dB SPL', max_SPL ),...
+                sprintf('Total auralization time is %.4g s', (dt*length(time)) - dt ),...
+                'Location','northoutside','Interpreter','Latex');
+
+    end
+
+    xlabel(xtag,'Interpreter','Latex');
     ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
-    
-    legend('PANAM input data',...
-        'Point of min. distance between source/receiver',...
-        sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt ),...
-        'Location','northoutside');
-    
+      
     ylim([ymin max(SPL_vs_time)  + 5]);
     
     set(gcf,'color','w');
@@ -92,34 +119,53 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_TrimData_SPL');
-        save_pdf = 1; save_png = 0;
+        save_pdf = 1; save_png = 1;
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
     %%% PLOT flight profile (altitude vs. x distance)
     
-    figure('name','PROCESSING - data trimming function (time-based)');
+   figure('name','PROCESSING - data trimming function (time-based)');
     h  = gcf;
     set(h,'Units','Inches');
     pos = get(h,'Position');
     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
-    
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % deprecated - changed into patch - 11.03.2025
+    % xmin = (input_4.x(idx_lower))./conv_factor;
+    % xmax = (input_4.x(idx_upper))./conv_factor - (input_4.x(idx_lower))./conv_factor;
+    % ymin = 0;
+    % ymax = (max( (input_4.z)./conv_factor ) ) + 5./conv_factor;
+    % rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+    % c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     xmin = (input_4.x(idx_lower))./conv_factor;
-    xmax = (input_4.x(idx_upper))./conv_factor - (input_4.x(idx_lower))./conv_factor;
-    ymin = 0;
-    ymax = (max( (input_4.z)./conv_factor ) ) + 5./conv_factor;
-    
-    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-    
-    plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    a = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor,'o' );
-    b = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,'*' ); % receiver position
-    c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
- 
-        legend([a, b, c], {'Point of min. distance between source/receiver',...
-                                   'Receiver position',...
-                        sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt )},...
-                                   'Location','northoutside');
+    xmax = (input_4.x(idx_upper))./conv_factor;
+    ymin = (input_4.z(idx_lower))./conv_factor;
+    ymax = (input_4.z(idx_upper))./conv_factor;
+
+    x_patch = [xmin xmin xmax xmax];
+    y_patch = [0 ymin ymax 0 ];
+    S=patch(x_patch,y_patch, 'red');
+    S.FaceColor = [0.94,0.94,0.94]; hold on; % patch - auralization time trim
+
+    a = plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor, 'k' );   % flight path
+    b = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor, 'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.30,0.75,0.93], 'MarkerSize', 8 ); % aircraft @ overhead
+    c = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,  'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.39,0.83,0.07], 'MarkerSize', 8 );  % receiver position
+    yline(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
+
+    % legend([a, b, c], {'Point of min. distance between source/receiver',...
+    %                    'Receiver position',...
+    %            sprintf('Total auralization time is %.4g (s)', (dt*length(time)) - dt )},...
+    %                    'Location','northoutside')
+      
+    legend([a, b, c, S], {'Flight path', ... 
+                               'Aircraft',...
+                               'Receiver',...
+                                sprintf('Auralized signal: %.4g s', (dt*length(time)) - dt )},...
+                               'Location', 'northoutside', 'Orientation', 'horizontal', 'NumColumns', 2);
     
     xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
@@ -131,7 +177,7 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_TrimData_flight_profile');
-        save_pdf = 1; save_png = 0;
+        save_pdf = 1; save_png = 1;
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
@@ -161,20 +207,40 @@ else % trim is possible
     ymin = min(SPL_vs_time);
     ymax = (max(SPL_vs_time) - min(SPL_vs_time) ) + 5;
     
-    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-    
-    plot( time, SPL_vs_time ); hold on;
-    plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-    
-    xlabel('Source time, $t_{\mathrm{s}}$ (s)','Interpreter','Latex');
+    switch ptag
+        case 'emission'
+
+            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+
+            plot( time, SPL_vs_time ); hold on;
+            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+
+            legend('PANAM input data',...
+                'Point of min. distance between source/receiver',...
+                sprintf('Total auralization time is %.4g s', 2*TrimTime ),...
+                'Location','northoutside');
+
+        case 'immission'
+
+            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+
+            plot( time, SPL_vs_time ); hold on;
+            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+            plot( time(idx_max), SPL_vs_time(idx_max),'*' );
+            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+
+            legend('PANAM input data',...
+                'Point of min. distance between source/receiver',...
+                sprintf('Max. SPL: $L_\\mathrm{max}$ %.4g dB SPL', max_SPL ),...
+                sprintf('Total auralization time is %.4g s', 2*TrimTime  ),...
+                'Location','northoutside','Interpreter','Latex');
+
+    end
+
+    xlabel(xtag,'Interpreter','Latex');
     ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
-    
-    legend('PANAM input data',...
-        'Point of min. distance between source/receiver',...
-        sprintf('Total auralization time is %.4g (s)', 2*TrimTime),...
-        'Location','northoutside');
-    
+
     ylim([ymin max(SPL_vs_time)  + 5]);
     
     set(gcf,'color','w');
@@ -185,7 +251,7 @@ else % trim is possible
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_TrimData_SPL');
-        save_pdf = 1; save_png = 0;
+        save_pdf = 1; save_png = 1;
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
@@ -197,22 +263,41 @@ else % trim is possible
     pos = get(h,'Position');
     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
 
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % deprecated - changed into patch - 11.03.2025
+    % xmin = (input_4.x(idx_lower))./conv_factor;
+    % xmax = (input_4.x(idx_upper))./conv_factor - (input_4.x(idx_lower))./conv_factor;
+    % ymin = 0;
+    % ymax = (max( (input_4.z)./conv_factor ) ) + 5./conv_factor;
+    % rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+    % c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     xmin = (input_4.x(idx_lower))./conv_factor;
-    xmax = (input_4.x(idx_upper))./conv_factor - (input_4.x(idx_lower))./conv_factor;
-    ymin = 0;
-    ymax = (max( (input_4.z)./conv_factor ) ) + 5./conv_factor;
-    
-    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-    
-    plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor ); hold on;
-    a = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor,'o' );
-    b = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,'*' ); % receiver position
-    c = line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
- 
-    legend([a, b, c], {'Point of min. distance between source/receiver',...
-                              'Receiver position',...
-                   sprintf('Total auralization time is %.4g (s)', 2*TrimTime )},...
-                              'Location','northoutside');
+    xmax = (input_4.x(idx_upper))./conv_factor;
+    ymin = (input_4.z(idx_lower))./conv_factor;
+    ymax = (input_4.z(idx_upper))./conv_factor;
+
+    x_patch = [xmin xmin xmax xmax];
+    y_patch = [0 ymin ymax 0 ];
+    S=patch(x_patch,y_patch, 'red');
+    S.FaceColor = [0.94,0.94,0.94]; hold on; % patch - auralization time trim
+
+    a = plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor, 'k' );   % flight path
+    b = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor, 'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.30,0.75,0.93], 'MarkerSize', 8 ); % aircraft @ overhead
+    c = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,  'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.39,0.83,0.07], 'MarkerSize', 8 );  % receiver position
+    yline(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
+
+    % legend([a, b, c], {'Point of min. distance between source/receiver',...
+    %                    'Receiver position',...
+    %            sprintf('Total auralization time is %.4g (s)', 2*TrimTime},...
+    %                    'Location','northoutside')
+      
+    legend([a, b, c, S], {'Flight path', ... 
+                               'Aircraft',...
+                               'Receiver',...
+                                sprintf('Auralized signal: %.4g s', 2*TrimTime)},...
+                               'Location', 'northoutside', 'Orientation', 'horizontal', 'NumColumns', 2);
     
     xlabel('$x$~(km)','Interpreter','Latex');
     ylabel('Altitude AGL, $h_{\mathrm{AGL}}$ (km)','Interpreter','Latex');
@@ -224,7 +309,7 @@ else % trim is possible
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_TrimData_flight_profile');
-        save_pdf = 1; save_png = 0;
+        save_pdf = 1; save_png = 1;
         export_figures( filename, save_mat_fig, save_png, save_pdf );
     end
 
