@@ -1,4 +1,4 @@
-function [idx_lower, idx_upper] = trim_data_TimeDistanceBased(input, TrimTime, input_4, tag_auralization, ptag)
+function [idx_lower, idx_upper] = trim_data_TimeDistanceBased(input, TrimTime, input_4, tag_auralization)
 %
 % function [idx_lower, idx_upper] = trim_data_TimeBased(input, TrimTime, input_4, tag_auralization)
 %
@@ -40,12 +40,7 @@ idx_upper = round( idx_min_dist + TrimTimebins); % idx of TrimTime after the min
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 conv_factor = 1000; % conversion factor (m-->km)
 
-switch ptag
-    case 'emission'
-        xtag = 'Source time, $t_\mathrm{s}$ (s)' ;
-    case 'immission'
-        xtag = 'Receiver time, $t_\mathrm{r}$ (s)' ;
-end
+xtag = 'Source time, $t_\mathrm{s}$ (s)' ;
 
 if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the input signal's time
     
@@ -76,36 +71,16 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     ymin = min(SPL_vs_time);
     ymax = (max(SPL_vs_time) - min(SPL_vs_time) ) + 5;
       
-    switch ptag
-        case 'emission'
+    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
 
-            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+    plot( time, SPL_vs_time ); hold on;
+    plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
 
-            plot( time, SPL_vs_time ); hold on;
-            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-
-            legend('PANAM input data',...
-                'Point of min. distance between source/receiver',...
-                sprintf('Total auralization time is %.4g s', (dt*length(time)) - dt ),...
-                'Location','northoutside');
-
-        case 'immission'
-
-            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-
-            plot( time, SPL_vs_time ); hold on;
-            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-            plot( time(idx_max), SPL_vs_time(idx_max),'*' );
-            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-
-            legend('PANAM input data',...
-                'Point of min. distance between source/receiver',...
-                sprintf('Max. SPL: $L_\\mathrm{max}$ %.4g dB SPL', max_SPL ),...
-                sprintf('Total auralization time is %.4g s', (dt*length(time)) - dt ),...
-                'Location','northoutside','Interpreter','Latex');
-
-    end
+    legend('PANAM input data',...
+        'Point of min. distance between source/receiver',...
+        sprintf('Total auralization time is %.4g s', (dt*length(time)) - dt ),...
+        'Location','northoutside');
 
     xlabel(xtag,'Interpreter','Latex');
     ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
@@ -206,37 +181,17 @@ else % trim is possible
     xmax = time(idx_upper) - time(idx_lower);
     ymin = min(SPL_vs_time);
     ymax = (max(SPL_vs_time) - min(SPL_vs_time) ) + 5;
-    
-    switch ptag
-        case 'emission'
 
-            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
+    rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
 
-            plot( time, SPL_vs_time ); hold on;
-            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
+    plot( time, SPL_vs_time ); hold on;
+    plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
+    line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
 
-            legend('PANAM input data',...
-                'Point of min. distance between source/receiver',...
-                sprintf('Total auralization time is %.4g s', 2*TrimTime ),...
-                'Location','northoutside');
-
-        case 'immission'
-
-            rectangle('position',[xmin ymin xmax ymax],'FaceColor',[0.95,0.95,0.95]); hold on;
-
-            plot( time, SPL_vs_time ); hold on;
-            plot( time(idx_min_dist), SPL_vs_time(idx_min_dist),'o' );
-            plot( time(idx_max), SPL_vs_time(idx_max),'*' );
-            line(NaN,NaN,'LineWidth',10,'Color',[0.95,0.95,0.95]); % dummy plot. work around for rectangle legend
-
-            legend('PANAM input data',...
-                'Point of min. distance between source/receiver',...
-                sprintf('Max. SPL: $L_\\mathrm{max}$ %.4g dB SPL', max_SPL ),...
-                sprintf('Total auralization time is %.4g s', 2*TrimTime  ),...
-                'Location','northoutside','Interpreter','Latex');
-
-    end
+    legend('PANAM input data',...
+        'Point of min. distance between source/receiver',...
+        sprintf('Total auralization time is %.4g s', 2*TrimTime ),...
+        'Location','northoutside');
 
     xlabel(xtag,'Interpreter','Latex');
     ylabel('SPL (dB re 20 $\mu$Pa)','Interpreter','Latex');
