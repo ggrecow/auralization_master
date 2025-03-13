@@ -1,3 +1,13 @@
+%% 13.03.2025
+
+% i think iver never worked with data with only 1 receiver. had to cahnge the reorganizing bit in the 
+<PANAM_SQAT_data_conversion.m>, which was not working when we have only one receiver in the input data
+
+% deleted other receiver position from the data, only remains receiver 1 - app centerline
+input data: C:\Users\greco\Desktop\auralization_verification_thesis\input\2023_greco_testcase_doppler\fine_discretization\V-R\approach
+ 
+
+---------------------------------------------------------------------------------------------------------------------------------------
 
 %% problems and changes when/after auralizing the A320 ATRA data from lothar (original files with FDR flight profile)
  
