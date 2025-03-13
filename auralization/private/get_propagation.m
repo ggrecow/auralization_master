@@ -1,5 +1,5 @@
-function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
-% function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+% function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
 % its flight trajectory (as is from PANAM input, without any interpolation) and the receiver position.
@@ -68,10 +68,19 @@ function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam,
 %       corresponds to the transfer function of the direct path, 1st order reflection, and the 
 %       combination of both eigenrays, respectively.  
 %
+%       spherical_angles_HRTF : struct
+%       spherical angles to use in the HRTF - correspond to the incidence angle of the rays on the receiver.
+%       Angles already converted to the
+%       spherical coordinates system used by the FABIAN database (phi= azimuth angle,
+%       and theta = elevation angle)
+%       with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
+%
 % Author: Gil Felix Greco, Braunschweig 08.12.2023
 % Author: Gil Felix Greco, Braunschweig 04.03.2025 - included plots of angles in
 % spherical coordinates (those are already converted to be used for HRTFs
-% (Fabian database convention)
+% (Fabian database convention - https://doi.org/10.14279/depositonce-5718.5)
+% Author: Gil Felix Greco, Braunschweig 13.03.2025 - output <spherical_angles_HRTF> 
+% structure with angles for HRTF 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -247,7 +256,7 @@ for i = 1:size(source,1)
      %                                            |                                             |                                                |
      %                                          -y - phi = 270                           |                                              -z-axis - theta = 180
 
-    % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.17743/jaes.2017.0033) 
+    % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.14279/depositonce-5718.5)
     % Fabian angle convention is receiver-based (spherical coordinates): theta = 0°  alligns
     % with x-axis and increases till 90° points upwards (northpole). After
     % that, decrease till
@@ -292,6 +301,13 @@ for i = 1:size(source,1)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end
+ 
+% get spherical angles for output - angles already converted to the
+% spherical coordinates system used by the FABIAN database (phi= azimuth angle,
+% and theta = elevation angle)
+% with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
+spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
+spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical;  
 
 clear idx_reflection hypotenuse;
 
