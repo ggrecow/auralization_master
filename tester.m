@@ -2,7 +2,11 @@ clear all; close all; clc;
 % script tester.m
 %
 %   Gives and example on how to call the auralization framework
-%   - input data: generic flyover
+%
+%   - Input data: generic flyover of an A319 during approach procedure
+%   (therefore, tehre are no (buzzsaw and fan) tonal components from the engine noise) 
+%
+%   - Only one receiver, positioned at (x,y,z) = (0, 0, 1.2) meters
 %
 % Gil Felix Greco, Braunschweig 13.03.2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
