@@ -669,58 +669,59 @@ n_observer = size(idx,1);                        % estimating the total number o
 clear source_time;
 
 if n_observer>1 % check if all observers have the same number of time-steps
-    
+
     for i = 1:(n_observer-2)       % got the number of time-steps per observer-1
-                                   
-    nTime_a(:) = idx(i+1)-idx(i);
-    nTime_b(:) = idx(i+2)-idx(i+1);
-    
+
+        nTime_a(:) = idx(i+1)-idx(i);
+        nTime_b(:) = idx(i+2)-idx(i+1);
+
     end
-else
-    
-%   return   % if only one observer is available, outputs already computed struct data(nTime,1)
-  
-end
 
-if nTime_a==nTime_b % this only works if all observers have the same number of time steps
-    
-nTime = nTime_a;
-clear nTime_a nTime_b
-    
-data_observer=cell(nTime,n_observer);      % declaring cell (nTimeSteps,nObserver)
+    if nTime_a==nTime_b % this only works if all observers have the same number of time steps
 
-% starts a nasty logic to re-organized the output <data> struct according to the number of receiver positions!!!
-for j = 1:size(data_observer,2)              % column loop (nObservers)
-    
-    if j==1
-        a = 1;
-        b = nTime;
+        nTime = nTime_a;
+        clear nTime_a nTime_b
+
+        data_observer=cell(nTime,n_observer);      % declaring cell (nTimeSteps,nObserver)
+
+        % starts a nasty logic to re-organized the output <data> struct according to the number of receiver positions!!!
+        for j = 1:size(data_observer,2)              % column loop (nObservers)
+
+            if j==1
+                a = 1;
+                b = nTime;
+            else
+                a = (j-1)*(nTime+1);
+                b = j*nTime;
+            end
+
+            k = round(linspace(a,b,nTime));
+
+            for i = 1:nTime      % time steps loop
+
+                aux_data = data{k(i)};
+
+                data_observer{i,j} = aux_data;
+
+                clear aux_data
+            end
+
+        end
+
+        data = data_observer; % the final output is the struct data(nTime,nObserver)
+
     else
-        a = (j-1)*(nTime+1);
-        b = j*nTime;
+        disp('WARNING: Observer positions dont have the same number of time-steps !!!');
+        return
     end
-    
-    k = round(linspace(a,b,nTime));
-    
-    for i = 1:nTime      % time steps loop
-        
-        aux_data = data{k(i)};
-        
-        data_observer{i,j} = aux_data;
-        
-        clear aux_data
-    end
-    
+
+    clear a b i j k nObs nTime data_observer
+
+else
+
+    %   return   % if only one observer is available, outputs already computed struct data(nTime,1)
+
 end
-
-data = data_observer; % the final output is the struct data(nTime,nObserver)
-
-else 
-    disp('WARNING: Observer positions dont have the same number of time-steps !!!');
-    return
-end
-
-clear a b i j k nObs nTime data_observer
 
 %% check for input data for doubled input values on time vector (only for checking and displaying, correction cant be made now in order to keep the same time vector for all receiver positions)
 
