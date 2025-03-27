@@ -1,5 +1,5 @@
-function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
-% function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+% function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
 % its flight trajectory (as is from PANAM input, without any interpolation) and the receiver position.
@@ -51,7 +51,6 @@ function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, ti
 %       contain the emission angles from PANAM. Only used to plot a
 %       comparison with the emission angles from ART
 %
-%
 %   show : logical (boolean)
 %   optional parameter for figures (results) display
 %   'false' (disable, default value) or 'true' (enable)
@@ -62,6 +61,9 @@ function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, ti
 %   included in the name of the saved files related to auralization processes
 %
 % OUTPUT:
+%   
+%       OUT : struct containing the following fields
+%
 %       TF : struct
 %       ART/ITA results containing the atmosperic transfer function for each combination of
 %       source x receiver positions (row vector). For each results, the 1st, 2nd and 3rd columns 
@@ -74,6 +76,12 @@ function [TF, spherical_angles_HRTF] = get_propagation(input, receiver, nfft, ti
 %       spherical coordinates system used by the FABIAN database (phi= azimuth angle,
 %       and theta = elevation angle)
 %       with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
+%
+%       propagation_time : vector
+%       contains propagation time of direct (1st column) and reflected (2nd
+%       column) eigenrays for each time step (rows). These are handy for
+%       designing separete FIR filters later on while considering the
+%       relative time difference between eigenrays
 %
 % Author: Gil Felix Greco, Braunschweig 08.12.2023
 % Author: Gil Felix Greco, Braunschweig 04.03.2025 - included plots of angles in
@@ -176,6 +184,7 @@ launchAngle_direct = zeros(1, size(source,1));
 launchAngle_reflected = zeros(1, size(source,1));
 launchAngle_direct_spherical = zeros(size(source,1), 2);
 launchAngle_reflected_spherical = zeros(size(source,1), 2);
+propagation_time = zeros(size(source,1), 2);
 
 % define parameters used for ground reflection
 
@@ -190,6 +199,11 @@ for i = 1:size(source,1)
     
     % Calculate Eigenrays
     eigenrays(i,:) = art.FindEigenrays(atmos, source(i,:), receiver);    
+
+    % get propagation time of each eigenray (necessary to design FIR filter
+    % later on considering the relative delays betweeen eigenrays)
+    propagation_time(i,1) = eigenrays(i,1).t(end); % direct path
+    propagation_time(i,2) = eigenrays(i,2).t(end); % reflected path
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Calculate ground reflection
@@ -306,8 +320,12 @@ end
 % spherical coordinates system used by the FABIAN database (phi= azimuth angle,
 % and theta = elevation angle)
 % with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
-spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
-spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical;  
+OUT.spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
+OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical;  
+
+% assign other outputs to OUT struct
+OUT.propagation_time = propagation_time;
+OUT.TF = TF;
 
 clear idx_reflection hypotenuse;
 
