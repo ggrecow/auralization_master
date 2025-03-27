@@ -315,7 +315,9 @@ for i = 1:size(source,1)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end
- 
+
+%% assign outputs
+
 % get spherical angles for output - angles already converted to the
 % spherical coordinates system used by the FABIAN database (phi= azimuth angle,
 % and theta = elevation angle)
@@ -323,7 +325,6 @@ end
 OUT.spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
 OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical;  
 
-% assign other outputs to OUT struct
 OUT.propagation_time = propagation_time;
 OUT.TF = TF;
 

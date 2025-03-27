@@ -152,21 +152,22 @@ switch input_type
         % get propagation freq response using ray-tracing (ART)
         emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART
         receiver = [ (input{1}.xobs) (input{1}.yobs) (input{1}.zobs) ]; % receiver position
-        [transferFunction, spherical_angles_HRTF] = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
+        OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
          
         % apply propagation
-
+ 
         % consider ground reflection
         considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection 
 
         tag_source = 'engineSignal';
-        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'airframeSignal';
-        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'overallSignal';
-        overallSignal = apply_propagation_FIR1( auralizedOverallSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        overallSignal = apply_propagation_HRTF(OUT_rayTracing, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         % save final auralized signal
         OutputAuralization.engineSignal = engineSignal;
