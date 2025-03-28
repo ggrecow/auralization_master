@@ -51,7 +51,12 @@ pref = 20e-6;
 
 % sampling frequency used for auralization
 global fs
-fs = str2double( input_file.sampling_freq );                       
+
+if isfield( input_file, 'sampling_freq' )
+    fs = str2double( input_file.sampling_freq ); % get <fs> from <input_file>
+else
+    fs = 48000; %default value
+end    
 
 % time resolution from PANAM. Assumes it is constant (source noise prediction dt from PANAM is usually .5 seconds and cte) - ACHTUNG: this is the case only for sound source   
 global dt_panam
@@ -151,7 +156,11 @@ OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_aur
 % apply propagation
 
 % consider ground reflection
-considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection
+if isfield( input_file, 'consider_ground_reflection' )
+    considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection
+else
+    considerGroundReflection = 1; % default value
+end
 
 tag_source = 'engineSignal';
 engineSignal = apply_propagation_HRTF(auralizedEngineSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
@@ -171,13 +180,10 @@ OutputAuralization.overallSignal = overallSignal;
 % save .wav
 
 % attenuation factor (changes dBFS of the written .wav file)
-
-% By default, AttenuationdB = 0, so it doesnt even need to be
-% provided in the <input_file>
 if isfield( input_file, 'AttenuationdB' )
     AttenuationdB = str2double ( input_file.attenuation_db );  % get <AttenuationdB> from <input_file>
 else
-    AttenuationdB = 0; 
+    AttenuationdB = 0; % default value
 end
 
 fileTag = '_overallSignal';
