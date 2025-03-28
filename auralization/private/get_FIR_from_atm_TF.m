@@ -8,6 +8,16 @@ function OUT = get_FIR_from_atm_TF( input, ray_delay_samples, fs, tag_auralizati
 %   2) transform double-sided spectrum signal to time domain
 %   3) shift impulse response to make it causal
 %   4) truncate FIR to nTaps
+%   5) we need to preserve phase differences of the tranfer functinos,
+%   otherwise we miss info about the time delay between reflected and
+%   direct sound paths that lead to constructive/destructive interferences.
+%   This is realized with the help from a function of the AKtools toolbox,
+%   to create a minimum phase FIR (direct path), and a linear phase FIR
+%   (reflected path) where the relative time-delays are included
+%
+% OBS: it is chosen to define the FIR taps so that a lower frequency of 10
+% Hz is achieved. This is because low frequencies are important for
+% aircraft noise.
 %
 %  nomenclature: 
 %  nBins = number of frequency bins
@@ -34,11 +44,12 @@ function OUT = get_FIR_from_atm_TF( input, ray_delay_samples, fs, tag_auralizati
 %   FIR : vector
 %       finite impulse response filter with size nTaps
 %
+% Gil Felix Greco, Braunschweig 28.03.2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% lets define nTaps based on fs and a desired min. freq
 
-min_freq = 20; % in (Hz)
+min_freq = 10; % in (Hz)
 nTaps = fs/20;
 
 % check if nTaps is big enough
