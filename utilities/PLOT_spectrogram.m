@@ -18,7 +18,7 @@ imagesc(T,F./1000,SPL) ; colorbar('vert'); set(gca,'YDir','Normal')
 colormap('jet'); % colormap(jet_white.jet_white); % colormap(artemis_colormap);
 
 ylim([0 15]);
-caxis([0 max(max(SPL))]);
+clim([0 max(max(SPL))]);
 
 xlabel('Auralization time, $t_{\mathrm{A}}$ (s)', 'Interpreter', 'Latex');
 ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
