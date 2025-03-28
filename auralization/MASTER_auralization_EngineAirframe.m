@@ -160,14 +160,14 @@ switch input_type
         considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection 
 
         tag_source = 'engineSignal';
-        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'airframeSignal';
-        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'overallSignal';
-        % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
-        overallSignal = apply_propagation_HRTF(OUT_rayTracing, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        overallSignal = apply_propagation_HRTF(auralizedOverallSignal, OUT_rayTracing, nfft, show, tag_auralization, tag_source, considerGroundReflection );
 
         % save final auralized signal
         OutputAuralization.engineSignal = engineSignal;
