@@ -60,7 +60,7 @@ set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(
 b = semilogx(frequencyVector_FIR, 10.*log10(abs(FR_cut_single_side(:, tBlock)).^2) );  hold on;
 
 % original FRF from ART
-a = semilogx(frequencyVector_FRF_ART, 10.*log10(abs(FRF_ART(:, tBlock)).^2) );  
+a = semilogx(frequencyVector_FRF_ART, 10.*log10(abs(FRF_ART(:, tBlock)).^2), '--', 'LineWidth', 1.5 );  
 
 xlabel( 'Frequency, $f$ (Hz)', 'Interpreter', 'Latex' );
 
