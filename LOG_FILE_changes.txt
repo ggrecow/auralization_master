@@ -22,6 +22,15 @@ With those changes, nTaps is not really necessary as an input anymore. nfft = ro
 transfer function in get_propagation, and nTaps is chosen to be defined by a desired lower freq (10Hz) in the FIR filters 
 , as implemented in the apply_propagation function
 
+
+- DEFAULT values (.ini file)
+
+	AttenuationdB = 0, defined in MASTER_auralization_EngineAirframe
+	sampling_freq = 48000, defined in MASTER_auralization_EngineAirframe
+	nfft - not necessary anymore. Must be removed from input file
+	consider_ground_reflection = 1, defined in MASTER_auralization_EngineAirframe
+	sigma_e = 100000e3, defined in get_propagation
+
 ---------------------------------------------------------------------------------------------------------------------------------------
 
 %% 13.03.2025
