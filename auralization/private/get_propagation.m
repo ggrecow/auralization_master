@@ -189,7 +189,22 @@ propagation_time = zeros(size(source,1), 2);
 % define parameters used for ground reflection
 
 % effective flow resistance [kPa/m^2.s]
-sigma_e = str2double( input_file.sigma_e );  
+
+% sigma_e_dict = {
+%     'snow': 25.,
+%     'forest': 50.,
+%     'grass': 250.,
+%     'dirt_roadside': 500.,
+%     'dirt': 5000,
+%     'asphalt': 10000,
+%     'concrete': 50000
+%     }
+
+if isfield( input_file, 'sigma_e' )
+    sigma_e = str2double( input_file.sigma_e );    
+else
+    sigma_e = 100000e3; % default value, hard surface 
+end
 
 % coarse approximation of sound speed as a function of temperature for ground reflection calculation
 soundSpeed = 331.3 + (temperatureCelsius * 0.606);  % This still needs to be tested for the case when temperature profiles are considered.
@@ -210,18 +225,8 @@ for i = 1:size(source,1)
     % The ground reflection factor is required for the transfer function
     % calculation. It is 1 by default. It can either be a singe value or a
     % complex-valued vector with same length as the frequency vector.
-
+    % ex from template: 
     % propagationModel.groundReflectionFactor = 0.9 * ones(size(propagationModel.frequencyVector)); % example from template
-
-    % sigma_e_dict = {
-    %     'snow': 25.,
-    %     'forest': 50.,
-    %     'grass': 250.,
-    %     'dirt_roadside': 500.,
-    %     'dirt': 5000,
-    %     'asphalt': 10000,
-    %     'concrete': 50000
-    %     }
 
     % find idx corresponding to reflection coordinate (i.e. point where reflected ray meets the ground at z = 0)
     idx_reflection = find( eigenrays(i, 2).r.z == 0 );  
