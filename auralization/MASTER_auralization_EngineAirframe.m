@@ -145,8 +145,9 @@ show_propagation = 1; % plot propagation results
 
 % FFT length used for freq vector of atmospheric transfer
 % function and as nTaps of the FIR filter of atmospheric transfer function
-nfft = round(fs*dt_panam);
+% nfft = round(fs*dt_panam);
 % nfft = str2double( input_file.nfft );
+nfft = fs*2; % to yield df=0.5 Hz. needs to be fine, otherwise ground reflection effects are not well described
 
 % get propagation freq response using ray-tracing (ART)
 emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART

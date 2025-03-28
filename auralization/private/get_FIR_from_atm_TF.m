@@ -50,7 +50,7 @@ function OUT = get_FIR_from_atm_TF( input, ray_delay_samples, fs, tag_auralizati
 %% lets define nTaps based on fs and a desired min. freq
 
 min_freq = 10; % in (Hz)
-nTaps = fs/20;
+nTaps = fs/min_freq;
 
 % check if nTaps is big enough
 if max(ray_delay_samples) >=  nTaps
