@@ -9,6 +9,11 @@ function save_wav(inputSignal, fs, AttenuationdB, fileTag, savePath)
 % correspond anymore to Pascal values (i.e. +1/-1 are not 94 dB SPL),
 % so this value needs to be known in order to calibrate the signal for later analysis
 %
+% Examples:
+%     
+%     AttenuationdB = 0; % so +1/-1 amplitude of .wav corrsponds to 94 dB SPL
+%     AttenuationdB = -10; % so +1/-1 amplitude of .wav corrsponds to 104 dB SPL
+%
 % INPUTS
 %
 %       inputSignal : vector
@@ -36,14 +41,11 @@ function save_wav(inputSignal, fs, AttenuationdB, fileTag, savePath)
 % Author: Gil Felix Greco, Braunschweig 18.01.2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 if isempty(savePath) % if <save_path> is empty, dont save anything
 else
     
     %% attenuate signal
-    
-%     AttenuationdB = 0; % -10 -> so +1/-1 amplitude corrsponds to 104 dB SPL
-    
+
     % string with the dBFS value according to <AttenuationdB>
     AttenuationTag = ['_FS' sprintf('%.1d',94-AttenuationdB) 'dBSPL']; 
     
