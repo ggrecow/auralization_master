@@ -145,7 +145,6 @@ switch input_type
         
         % FFT length used for freq vector of atmospheric transfer
         % function and as nTaps of the FIR filter of atmospheric transfer function        
-        % % nfft =  2^14;
         nfft = round(fs*dt_panam);  
         % nfft = str2double( input_file.nfft );    
 
@@ -160,14 +159,14 @@ switch input_type
         considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection 
 
         tag_source = 'engineSignal';
-        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        engineSignal = apply_propagation_HRTF(auralizedEngineSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'airframeSignal';
-        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        airframeSignal = apply_propagation_HRTF(auralizedAirframeSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
 
         tag_source = 'overallSignal';
-        % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.TF, nfft, show, tag_auralization, tag_source, considerGroundReflection );
-        overallSignal = apply_propagation_HRTF(auralizedOverallSignal, OUT_rayTracing, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+        % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.TF, show, tag_auralization, tag_source, considerGroundReflection );
+        overallSignal = apply_propagation_HRTF(auralizedOverallSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
 
         % save final auralized signal
         OutputAuralization.engineSignal = engineSignal;
