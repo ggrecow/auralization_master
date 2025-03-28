@@ -145,9 +145,9 @@ switch input_type
         
         % FFT length used for freq vector of atmospheric transfer
         % function and as nTaps of the FIR filter of atmospheric transfer function        
-        % nfft =  2^14;
-        % nfft = round(fs*dt_panam);  
-        nfft = str2double( input_file.nfft );    
+        % % nfft =  2^14;
+        nfft = round(fs*dt_panam);  
+        % nfft = str2double( input_file.nfft );    
 
         % get propagation freq response using ray-tracing (ART)
         emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART
@@ -188,31 +188,6 @@ switch input_type
 
         fileTag = '_airframeSignal';
         save_wav( airframeSignal, fs, AttenuationdB, fileTag, tag_auralization );
-
-    case 'immission' % synthesized signals at the receiver are saved
-        
-        % Outputs in vector format
-        OutputAuralization.engineSignal = auralizedEngineSignal;
-        OutputAuralization.airframeSignal = auralizedAirframeSignal;
-        OutputAuralization.overallSignal = auralizedOverallSignal;
-        
-        % write .wav file
-        
-        % attenuation factor (changes dBFS of the written .wav file)
-        AttenuationdB = str2double ( input_file.attenuation_db );
-        %          AttenuationdB = -10; % so +1/-1 amplitude corrsponds to 104 dB SPL
-        
-        % EngineSignal
-        fileTag = '_engineSignal';
-        save_wav( auralizedEngineSignal, fs, AttenuationdB, fileTag, tag_auralization )
-        
-        % AirframeSignal
-        fileTag = '_airframeSignal';
-        save_wav( auralizedAirframeSignal, fs, AttenuationdB, fileTag, tag_auralization )
-        
-        % OverallSignal
-        fileTag = '_overallSignal';
-        save_wav( auralizedOverallSignal, fs, AttenuationdB, fileTag, tag_auralization )
         
 end
 
