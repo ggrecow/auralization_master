@@ -1,5 +1,5 @@
-function outputSignal = apply_propagation_HRTF(inputSignal, inputRayTracing, nTaps, show, tag_auralization, tag_source, considerGroundReflection )
-% function outputSignal = apply_propagation_HRTF(inputSignal, transferFunction, nTaps, show, tag_auralization, tag_source, considerGroundReflection)
+function outputSignal = apply_propagation_HRTF(inputSignal, inputRayTracing, show, tag_auralization, tag_source, considerGroundReflection )
+% function outputSignal = apply_propagation_HRTF(inputSignal, transferFunction, show, tag_auralization, tag_source, considerGroundReflection)
 %
 % The auralization of the aircraft noise at a receiver position is conducted here by applying the 
 % atmospheric <transferFunction> computed using the fuction <get_propagation> to the <inputSignal> 
@@ -36,6 +36,8 @@ function outputSignal = apply_propagation_HRTF(inputSignal, inputRayTracing, nTa
 %       Auralized aircraft noise in the ground, in Pascal
 %
 % Author: Gil Felix Greco, Braunschweig  11.03.2024
+% 28.03.2025, reformulated to process direct and reflected raypaths
+% individually. Include capability of generating binaural signals.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global fs % sampling frequency used for auralization, defined in the <auralization_master>
