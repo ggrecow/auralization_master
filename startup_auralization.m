@@ -59,3 +59,11 @@ bAdd = ~exist('Faddeeva_w.m','file');
 if bAdd
     addpath(Faddeeva);
 end
+
+%% add Faddeeva codes for numerical error calculation
+AKtools = [bp 'third_party' filesep 'AKtools' filesep];
+
+bAdd = ~exist('AKphaseManipulation.m','file');
+if bAdd
+    addpath(AKtools);
+end
