@@ -58,6 +58,13 @@ else
     fs = 48000; %default value
 end    
 
+% define default for <binaural_signal>
+if isfield( input_file, 'binaural_signal' )
+    binaural_signal = str2double ( input_file.binaural_signal );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection
+else
+    binaural_signal = 0; % default value
+end
+
 % time resolution from PANAM. Assumes it is constant (source noise prediction dt from PANAM is usually .5 seconds and cte) - ACHTUNG: this is the case only for sound source   
 global dt_panam
 dt_panam =  input{2,1}.source_time - input{1,1}.source_time;  
@@ -164,21 +171,19 @@ else
 end
 
 tag_source = 'engineSignal';
-engineSignal = apply_propagation_HRTF(auralizedEngineSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
+engineSignal = apply_propagation(auralizedEngineSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection ); % <- binaural truncated to zero
 
 tag_source = 'airframeSignal';
-airframeSignal = apply_propagation_HRTF(auralizedAirframeSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
+airframeSignal = apply_propagation(auralizedAirframeSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection ); % <- binaural truncated to zero
 
 tag_source = 'overallSignal';
 % overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.TF, show, tag_auralization, tag_source, considerGroundReflection );
-overallSignal = apply_propagation_HRTF(auralizedOverallSignal, OUT_rayTracing, show, tag_auralization, tag_source, considerGroundReflection );
+overallSignal = apply_propagation(auralizedOverallSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection );
 
-% save final auralized signal
-OutputAuralization.engineSignal = engineSignal;
-OutputAuralization.airframeSignal = airframeSignal;
-OutputAuralization.overallSignal = overallSignal;
-
-% save .wav
+% save final auralized signal (mono signals)
+OutputAuralization.engineSignal = engineSignal.outputSignal;
+OutputAuralization.airframeSignal = airframeSignal.outputSignal;
+OutputAuralization.overallSignal = overallSignal.outputSignal;
 
 % attenuation factor (changes dBFS of the written .wav file)
 if isfield( input_file, 'AttenuationdB' )
@@ -187,14 +192,38 @@ else
     AttenuationdB = 0; % default value
 end
 
-fileTag = '_overallSignal';
-save_wav( overallSignal, fs, AttenuationdB, fileTag, tag_auralization );
-
+% save .wav
 fileTag = '_engineSignal';
-save_wav( engineSignal, fs, AttenuationdB, fileTag, tag_auralization );
+save_wav( engineSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
 
 fileTag = '_airframeSignal';
-save_wav( airframeSignal, fs, AttenuationdB, fileTag, tag_auralization );
+save_wav( airframeSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
+
+fileTag = '_overallSignal';
+save_wav( overallSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
+
+% binaural signal
+
+if binaural_signal == 1
+
+    % save final auralized signal (stereo signals)
+    OutputAuralization.engineSignal_binaural = engineSignal.outputSignal_binaural;
+    OutputAuralization.airframeSignal_binaural = airframeSignal.outputSignal_binaural;
+    OutputAuralization.overallSignal_binaural = overallSignal.outputSignal_binaural;
+
+    % save .wav
+    fileTag = '_engineSignal_binaural';
+    save_wav( engineSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+    fileTag = '_airframeSignal_binaural';
+    save_wav( airframeSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+    fileTag = '_overallSignal_binaural';
+    save_wav( overallSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+end
+
+%% end
 
 % fprintf('\n- Total auralization (%s-based) time (including processes above):\t%f sec\n', input_type, toc);
 fprintf('*--------------------------------------------------------------------------*\n');
