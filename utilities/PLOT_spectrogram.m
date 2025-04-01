@@ -9,28 +9,50 @@ windowsize = 1024;
 pref = 20e-6;
 % pref = 1;
 
-[P,F,T] = myspecgram(input, fs, windowsize , 0.75); % overlap is 75% of nfft here
+tiledlayout('vertical')
 
-SPL = 20.*log10(abs(P)./pref);
-imagesc(T,F./1000,SPL) ; colorbar('vert'); set(gca,'YDir','Normal')
+for nChannels = 1:size( input, 2 )
 
-% jet_white = load('utilities\COLORMAP_jet_white');
-colormap('jet'); % colormap(jet_white.jet_white); % colormap(artemis_colormap);
+    ax = nexttile(nChannels);
 
-ylim([0 15]);
-clim([0 max(max(SPL))]);
+    [P,F,T] = myspecgram(input(:,nChannels), fs, windowsize , 0.75); % overlap is 75% of nfft here
 
-xlabel('Auralization time, $t_{\mathrm{A}}$ (s)', 'Interpreter', 'Latex');
-ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
-ylabel(colorbar, 'SPL, $L_{\mathrm{Z}}$ (dB re 20$~\mu$Pa)','Interpreter','Latex');
+    SPL = 20.*log10(abs(P)./pref);
+    imagesc(T,F./1000,SPL) ; 
+    set(gca,'YDir','Normal')
+
+    % jet_white = load('utilities\COLORMAP_jet_white');
+    % colormap('jet'); % colormap(jet_white.jet_white); % colormap(artemis_colormap);
+    colormap(ax, 'jet');
+
+    if max(max(SPL))>110 % probably emission at the source
+        cMin  = 100;
+    else
+        cMin = 0;
+    end
+
+    ylim([0 15]); % freq axis
+    clim([cMin max(max(SPL))]);
+    ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
+
+end
+
+% Common features
+cb = colorbar;
+cb.Layout.Tile = 'east';
+
+zString = 'SPL, $L_{\mathrm{Z}}$ (dB re 20$~\mu$Pa)';
+set( get(cb,'label'), 'string', zString, 'fontsize', 16, 'Interpreter','Latex');
+
+xlabel('Time, $t$ (s)', 'Interpreter', 'Latex');
 
 set(gcf,'color','w');
 
 if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
 else
-        filename = strcat(tag_auralization, tag_save);
-        save_pdf = 0; save_png = 1;
-        export_figures( filename, save_mat_fig, save_png, save_pdf );
+    filename = strcat(tag_auralization, tag_save);
+    save_pdf = 0; save_png = 1;
+    export_figures( filename, save_mat_fig, save_png, save_pdf );
 end
 
 %% myspecgram function
