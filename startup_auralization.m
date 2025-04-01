@@ -60,10 +60,18 @@ if bAdd
     addpath(Faddeeva);
 end
 
-%% add Faddeeva codes for numerical error calculation
+%% add AKtools
 AKtools = [bp 'third_party' filesep 'AKtools' filesep];
 
 bAdd = ~exist('AKphaseManipulation.m','file');
+if bAdd
+    addpath(AKtools);
+end
+
+%% add data from FABIAN HRTF database 
+AKtools = [bp 'third_party' filesep 'FABIAN_HRTF_DATABASE_v4' filesep];
+
+bAdd = ~exist('FABIAN_HRIR_measured_HATO_0.m','file');
 if bAdd
     addpath(AKtools);
 end
