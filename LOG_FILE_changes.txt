@@ -1,4 +1,13 @@
 
+++ 31.03.2025 (all these changes need to be transfered to SQAT_MASTER)
+
+inlcuded get_binaural function in MASTER_auralization_EngineAirframe
+
+- DEFAULT values (.ini file)
+
+	binaural_signal = 0, defined in MASTER_auralization_EngineAirframe
+	head_orientation = 0, defined in the 
+
 ++ 28.03.2025 (all these changes need to be transfered to SQAT_MASTER)
 
 - deleted imission-bsaed part from MASTER_auralization_EngineAirframe
