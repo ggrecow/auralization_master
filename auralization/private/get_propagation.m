@@ -72,10 +72,13 @@ function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam
 %
 %       spherical_angles_HRTF : struct
 %       spherical angles to use in the HRTF - correspond to the incidence angle of the rays on the receiver.
-%       Angles already converted to the
-%       spherical coordinates system used by the FABIAN database (phi= azimuth angle,
-%       and theta = elevation angle)
-%       with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
+%       Angles already converted to the head-centered spherical coordinates system adopted by 
+%       the FABIAN database (DOI: 10.14279/depositonce-5718.5), being phi= azimuth angle,
+%       and theta = elevation angle,  with [phi,theta] angles of direct and reflected rays in 
+%       each column, and source/receiver positions in each row. 
+%       Angle convention is:  
+%       Azimuth angle(s), in degrees:  (0=front, 90=left, 180/-180=back, 270/-90=right)
+%       Elevation angle(s), in degrees:  (90=North Pole, 0=front, -90=South Pole)
 %
 %       propagation_time : vector
 %       contains propagation time of direct (1st column) and reflected (2nd
