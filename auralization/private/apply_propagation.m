@@ -132,26 +132,35 @@ end
 BlockLen = round(fs*dt_panam);
 
 % convolute inputSignal with FIR of direct sound path
-outputSignal_direct = overlapp_add_convolution( inputSignal, BlockLen, FIR_direct );
+outputSignal_direct = overlapp_add_convolution( inputSignal, BlockLen, FIR_direct, 'mono' );
 
 if binaural_signal == 1
 
     % incidence angle (spherical coordinates) of the incoming sound wave (direct path)
     azimuth = inputRayTracing.spherical_angles_HRTF.direct_path(:,1);
     elevation = inputRayTracing.spherical_angles_HRTF.direct_path(:,2);
+    HATO = 0; % head-above-torso orientation, degrees
 
+    % get HRIR
+    [h.l_a, h.r_a] = AKhrirInterpolation(azimuth+head_orientation, elevation, HATO, 'measured_sh');
+
+    % approach 1) overlap add
+    outputSignal_direct_binaural =  overlapp_add_convolution( inputSignal, BlockLen, h, 'stereo' ); 
+
+    clear h; h.l_a = FIR_direct; h.r_a = FIR_direct;
+    outputSignal_direct_binaural =  overlapp_add_convolution( outputSignal_direct_binaural, BlockLen, h, 'stereo' );
+
+    % approach 2) get binaural signal (direct sound path). Error: some artifacts, not sure why
     % load spherical harmonics data
-    d = load( fullfile( 'FABIAN_HRIR_measured_HATO_0' ) );
-
-    % get binaural signal (direct sound path)
-    outputSignal_direct_binaural = AKshAura(outputSignal_direct, azimuth+head_orientation, elevation, d.SH.coeffLeft, d.SH.coeffRight, 'complex', true, 1, BlockLen);
+    % d = load( fullfile( 'FABIAN_HRIR_measured_HATO_0' ) );
+    % outputSignal_direct_binaural = AKshAura(outputSignal_direct, azimuth+head_orientation, elevation, d.SH.coeffLeft, d.SH.coeffRight, 'complex', true, 1, BlockLen);
 
 end
 
 if considerGroundReflection == 1
 
     % convolute inputSignal with FIR of reflected sound path
-    outputSignal_reflected = overlapp_add_convolution( inputSignal, BlockLen, FIR_reflected );
+    outputSignal_reflected = overlapp_add_convolution( inputSignal, BlockLen, FIR_reflected, 'mono' );
 
     % output (mono) signal
     outputSignal.outputSignal = outputSignal_direct + outputSignal_reflected;
@@ -163,8 +172,18 @@ if considerGroundReflection == 1
     azimuth = inputRayTracing.spherical_angles_HRTF.reflected_path(:,1);
     elevation = inputRayTracing.spherical_angles_HRTF.reflected_path(:,2);
 
-    % get binaural signal (reflected sound path)
-    outputSignal_reflected_binaural = AKshAura(outputSignal_reflected, azimuth+head_orientation, elevation, d.SH.coeffLeft, d.SH.coeffRight, 'complex', true, 1, BlockLen);
+    % get HRIRs
+    clear h;
+    [h.l_a, h.r_a] = AKhrirInterpolation(azimuth+head_orientation, elevation, HATO, 'measured_sh');
+
+    % approach 1) overlap add
+    outputSignal_reflected_binaural =  overlapp_add_convolution( inputSignal, BlockLen, h, 'stereo' ); 
+
+    clear h; h.l_a = FIR_reflected; h.r_a = FIR_reflected;
+    outputSignal_reflected_binaural =  overlapp_add_convolution( outputSignal_reflected_binaural, BlockLen, h, 'stereo' );
+
+    % approach 2) get binaural signal (reflected sound path). Error: some artifacts, not sure why
+    % outputSignal_reflected_binaural = AKshAura(outputSignal_reflected, azimuth+head_orientation, elevation, d.SH.coeffLeft, d.SH.coeffRight, 'complex', true, 1, BlockLen);
     
     % output (stereo) signal
     outputSignal.outputSignal_binaural = outputSignal_direct_binaural + outputSignal_reflected_binaural;
