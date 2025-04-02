@@ -147,8 +147,8 @@ if binaural_signal == 1
     % approach 1) overlap add
     outputSignal_direct_binaural =  overlapp_add_convolution( inputSignal, BlockLen, hrir_direct, 'stereo' ); 
 
-    clear hrir_direct; hrir_direct.l_a = FIR_direct; hrir_direct.r_a = FIR_direct;
-    outputSignal_direct_binaural =  overlapp_add_convolution( outputSignal_direct_binaural, BlockLen, hrir_direct, 'stereo' );
+    hatm_direct.l_a = FIR_direct; hatm_direct.r_a = FIR_direct;
+    outputSignal_direct_binaural =  overlapp_add_convolution( outputSignal_direct_binaural, BlockLen, hatm_direct, 'stereo' );
 
 end
 
@@ -173,8 +173,8 @@ if considerGroundReflection == 1
     % approach 1) overlap add
     outputSignal_reflected_binaural =  overlapp_add_convolution( inputSignal, BlockLen, hrir_reflected, 'stereo' ); 
 
-    clear hrir_reflected; hrir_reflected.l_a = FIR_reflected; hrir_reflected.r_a = FIR_reflected;
-    outputSignal_reflected_binaural =  overlapp_add_convolution( outputSignal_reflected_binaural, BlockLen, hrir_reflected, 'stereo' );
+    hatm_reflected.l_a = FIR_reflected; hatm_reflected.r_a = FIR_reflected;
+    outputSignal_reflected_binaural =  overlapp_add_convolution( outputSignal_reflected_binaural, BlockLen, hatm_reflected, 'stereo' );
 
     % output (stereo) signal
     outputSignal.outputSignal_binaural = outputSignal_direct_binaural + outputSignal_reflected_binaural;
@@ -216,6 +216,10 @@ if binaural_signal == 1
                 tag_title =  ['OUTPUT - Spectrogram of  HRIRs  - ' tag_source];
                 tag_save = ['_' tag_source '_spectrogram_HRIR'];
                 PLOT_HRIR_spectrogram(hrir_direct, hrir_reflected, dt_panam, tag_title, tag_auralization, tag_save)
+
+                tag_title =  ['OUTPUT - Spectrogram (binaural - mono) - ' tag_source];
+                tag_save = ['_' tag_source '_spectrogram_binaural_mono'];
+                PLOT_spectrogram_difference(outputSignal.outputSignal, outputSignal.outputSignal_binaural, fs, tag_title, tag_auralization, tag_save);
         end
 
     else

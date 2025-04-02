@@ -331,7 +331,8 @@ end
 % and theta = elevation angle)
 % with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
 OUT.spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
-OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical;  
+launchAngle_reflected_spherical_smooth = smoothdata(launchAngle_reflected_spherical, 'movmean', 10);
+OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical_smooth;  
 
 OUT.propagation_time = propagation_time;
 OUT.TF = TF;
@@ -455,7 +456,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,1), '-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    a = xline( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -472,10 +473,12 @@ if show == 1
     ax1.GridLineStyle = '--';
     ax1.GridAlpha = 0.15;
 
+    legend(a , 'Overhead', 'Location', 'NE');
+
 % second tile - elevation angle
     ax2 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,2), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    xline( xx(overhead_idx), 'k--' );
 
     ylim([0 90]);          
     yticks([0 30 60 90]);
@@ -486,8 +489,6 @@ if show == 1
     ax2.YGrid = 'on';
     ax2.GridLineStyle = '--';
     ax2.GridAlpha = 0.15;
-
-    legend(a , 'Overhead', 'Location', 'NE');
 
     set( gcf,'color','w');
 
@@ -511,7 +512,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_reflected_spherical(:,1), '-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    a = xline( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -528,10 +529,13 @@ if show == 1
     ax1.GridLineStyle = '--';
     ax1.GridAlpha = 0.15;
 
+    legend(a , 'Overhead', 'Location', 'NE');
+
 % second tile - elevation angle
     ax2 = nexttile;
-    plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    b = plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
+    c = plot( xx, launchAngle_reflected_spherical_smooth(:,2), 'r-'); hold on;
+    xline( xx(overhead_idx), 'k--' );
 
     ylim([-90 0]);          
     yticks([-90 -60 -30 0]);
@@ -543,7 +547,7 @@ if show == 1
     ax2.GridLineStyle = '--';
     ax2.GridAlpha = 0.15;
 
-    legend(a , 'Overhead', 'Location', 'NE');
+    legend( [b,c], {'ART','Smoothed'}, 'Location', 'SE');
 
     set( gcf,'color','w');
 

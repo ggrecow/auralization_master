@@ -68,7 +68,7 @@ ax2.XTickLabelRotation = 0;
 ax2.XLabel.Interpreter = 'latex';
 ax2.XLabel.String =  XLabelStr;
 ax2.XLabel.Rotation = 0;
-ax2.Title.String = 'Direct - Right ear';
+ax2.Title.String = 'Direct - right ear';
 ax2.Title.FontWeight = 'normal';
 ax2.Title.Interpreter = 'latex';
 
@@ -114,7 +114,7 @@ colorbar('off'); % Remove the colorbar from the figure
 % reflected - right ear
 ax4 = nexttile;
 
-data = input_reflected.l_a;
+data = input_reflected.r_a;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
@@ -132,7 +132,7 @@ ax4.XTickLabelRotation = 0;
 ax4.XLabel.Interpreter = 'latex';
 ax4.XLabel.String =  XLabelStr;
 ax4.XLabel.Rotation = 0;
-ax4.Title.String = 'Left ear';
+ax4.Title.String = 'Reflected - right ear';
 ax4.Title.FontWeight = 'normal';
 ax4.Title.Interpreter = 'latex';
 
@@ -140,7 +140,6 @@ ax4.Title.Interpreter = 'latex';
 
 yticklabels(""); % Remove y axis numbering
 ylabel(""); % Remove y axis label
-colorbar('off'); % Remove the colorbar from the figure
 
 % common settings
 
