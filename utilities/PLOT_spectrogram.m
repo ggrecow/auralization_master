@@ -34,6 +34,19 @@ for nChannels = 1:size( input, 2 )
     ylim([0 15]); % freq axis
     clim([cMin max(max(SPL))]);
     ylabel('Frequency, $f$ (kHz)','Interpreter','Latex');
+    xlabel('Time, $t$ (s)', 'Interpreter', 'Latex');
+
+    if size( input, 2 ) >1
+        if nChannels==1
+            ax.Title.String = 'Left ear';
+            ax.Title.FontWeight = 'normal';
+            ax.Title.Interpreter = 'latex';
+        else
+            ax.Title.String = 'Right ear';
+            ax.Title.FontWeight = 'normal';
+            ax.Title.Interpreter = 'latex';
+        end
+    end
 
 end
 
@@ -43,8 +56,6 @@ cb.Layout.Tile = 'east';
 
 zString = 'SPL, $L_{\mathrm{Z}}$ (dB re 20$~\mu$Pa)';
 set( get(cb,'label'), 'string', zString, 'fontsize', 16, 'Interpreter','Latex');
-
-xlabel('Time, $t$ (s)', 'Interpreter', 'Latex');
 
 set(gcf,'color','w');
 
