@@ -1,5 +1,0 @@
-*.fig
-*.wav
-*.pdf
-TEST_input_data/results_auralization/*
-

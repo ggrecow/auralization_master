@@ -1,3 +1,47 @@
+
+++ 31.03.2025 (all these changes need to be transfered to SQAT_MASTER)
+
+inlcuded get_binaural function in MASTER_auralization_EngineAirframe
+
+- DEFAULT values (.ini file)
+
+	binaural_signal = 0, defined in MASTER_auralization_EngineAirframe
+	head_orientation = 0, defined in the 
+
+++ 28.03.2025 (all these changes need to be transfered to SQAT_MASTER)
+
+- deleted imission-bsaed part from MASTER_auralization_EngineAirframe
+
+- Several changes to allow for HRTF synthesis. Main point to allot for that is the individual processing of
+	the direct and reflected sound paths, which were until now performed together
+	
+CHANGES ON: get_propagation
+- new output provides propagation time to facilitate the computation of the relative delay between the two rays on the FIR procedure
+- a OUT structure is now the only oitput of the get_propagation function
+
+CHANGES ON: apply_propagation_FIR1	
+- apply_propagation_FIR1 was deprecated
+- apply_propagation_HRTF is now the new function (largely based on apply_propagation_FIR1), but more structured
+  - apply_propagation_HRTF handles directand reflected soundpahts individually  
+  - apply_propagation_HRTF -> get_FIR_from_atm_TF, which creates the FIR filters - minimum phase (direct) - linear phase (reflected)
+  - get_FIR_from_atm_TF, used the AKphaseManipulation.m function from the AKtools (added in the third party folder)	
+  - apply_propagation_HRTF -> overlapp_add_convolution, just like before but now in a individual function	
+
+With those changes, nTaps is not really necessary as an input anymore. nfft = round(fs*dt_panam) for the freq vector of the 
+transfer function in get_propagation, and nTaps is chosen to be defined by a desired lower freq (10Hz) in the FIR filters 
+, as implemented in the apply_propagation function
+
+
+- DEFAULT values (.ini file)
+
+	AttenuationdB = 0, defined in MASTER_auralization_EngineAirframe
+	sampling_freq = 48000, defined in MASTER_auralization_EngineAirframe
+	nfft - not necessary anymore. Must be removed from input file
+	consider_ground_reflection = 1, defined in MASTER_auralization_EngineAirframe
+	sigma_e = 100000e3, defined in get_propagation
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
 %% 13.03.2025
 
 % i think iver never worked with data with only 1 receiver. had to cahnge the reorganizing bit in the 

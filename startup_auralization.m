@@ -59,3 +59,35 @@ bAdd = ~exist('Faddeeva_w.m','file');
 if bAdd
     addpath(Faddeeva);
 end
+
+%% add AKtools
+AKtools = [bp 'third_party' filesep 'AKtools' filesep];
+
+bAdd = ~exist('AKphaseManipulation.m','file');
+if bAdd
+    addpath(AKtools);
+end
+
+%% add AKtools - plot tools 
+AKtools_plotting = [bp 'third_party' filesep 'AKtools' filesep 'Plotting'];
+
+bAdd = ~exist('AKp.m','file');
+if bAdd
+    addpath(AKtools_plotting);
+end
+
+%% add AKtools - plot tools brewer
+AKtools_brewer = [bp 'third_party' filesep 'AKtools' filesep 'Plotting' filesep 'cbrewer'];
+
+bAdd = ~exist('cbrewer.m','file');
+if bAdd
+    addpath(AKtools_brewer);
+end
+
+%% add data from FABIAN HRTF database 
+HRTF= [bp 'third_party' filesep 'FABIAN_HRTF_DATABASE_v4' filesep];
+
+bAdd = ~exist('FABIAN_HRIR_measured_HATO_0.m','file');
+if bAdd
+    addpath(HRTF);
+end

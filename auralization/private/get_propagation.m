@@ -1,5 +1,5 @@
-function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
-% function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+% function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
 % its flight trajectory (as is from PANAM input, without any interpolation) and the receiver position.
@@ -51,7 +51,6 @@ function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam,
 %       contain the emission angles from PANAM. Only used to plot a
 %       comparison with the emission angles from ART
 %
-%
 %   show : logical (boolean)
 %   optional parameter for figures (results) display
 %   'false' (disable, default value) or 'true' (enable)
@@ -62,16 +61,37 @@ function TF = get_propagation(input, receiver, nfft, time, emission_angle_panam,
 %   included in the name of the saved files related to auralization processes
 %
 % OUTPUT:
+%   
+%       OUT : struct containing the following fields
+%
 %       TF : struct
 %       ART/ITA results containing the atmosperic transfer function for each combination of
 %       source x receiver positions (row vector). For each results, the 1st, 2nd and 3rd columns 
 %       corresponds to the transfer function of the direct path, 1st order reflection, and the 
 %       combination of both eigenrays, respectively.  
 %
+%       spherical_angles_HRTF : struct
+%       spherical angles to use in the HRTF - correspond to the incidence angle of the rays on the receiver.
+%       Angles already converted to the head-centered spherical coordinates system adopted by 
+%       the FABIAN database (DOI: 10.14279/depositonce-5718.5), being phi= azimuth angle,
+%       and theta = elevation angle,  with [phi,theta] angles of direct and reflected rays in 
+%       each column, and source/receiver positions in each row. 
+%       Angle convention is:  
+%       Azimuth angle(s), in degrees:  (0=front, 90=left, 180/-180=back, 270/-90=right)
+%       Elevation angle(s), in degrees:  (90=North Pole, 0=front, -90=South Pole)
+%
+%       propagation_time : vector
+%       contains propagation time of direct (1st column) and reflected (2nd
+%       column) eigenrays for each time step (rows). These are handy for
+%       designing separete FIR filters later on while considering the
+%       relative time difference between eigenrays
+%
 % Author: Gil Felix Greco, Braunschweig 08.12.2023
 % Author: Gil Felix Greco, Braunschweig 04.03.2025 - included plots of angles in
 % spherical coordinates (those are already converted to be used for HRTFs
-% (Fabian database convention)
+% (Fabian database convention - https://doi.org/10.14279/depositonce-5718.5)
+% Author: Gil Felix Greco, Braunschweig 13.03.2025 - output <spherical_angles_HRTF> 
+% structure with angles for HRTF 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -167,11 +187,27 @@ launchAngle_direct = zeros(1, size(source,1));
 launchAngle_reflected = zeros(1, size(source,1));
 launchAngle_direct_spherical = zeros(size(source,1), 2);
 launchAngle_reflected_spherical = zeros(size(source,1), 2);
+propagation_time = zeros(size(source,1), 2);
 
 % define parameters used for ground reflection
 
 % effective flow resistance [kPa/m^2.s]
-sigma_e = str2double( input_file.sigma_e );  
+
+% sigma_e_dict = {
+%     'snow': 25.,
+%     'forest': 50.,
+%     'grass': 250.,
+%     'dirt_roadside': 500.,
+%     'dirt': 5000,
+%     'asphalt': 10000,
+%     'concrete': 50000
+%     }
+
+if isfield( input_file, 'sigma_e' )
+    sigma_e = str2double( input_file.sigma_e );    
+else
+    sigma_e = 100000e3; % default value, hard surface 
+end
 
 % coarse approximation of sound speed as a function of temperature for ground reflection calculation
 soundSpeed = 331.3 + (temperatureCelsius * 0.606);  % This still needs to be tested for the case when temperature profiles are considered.
@@ -182,23 +218,18 @@ for i = 1:size(source,1)
     % Calculate Eigenrays
     eigenrays(i,:) = art.FindEigenrays(atmos, source(i,:), receiver);    
 
+    % get propagation time of each eigenray (necessary to design FIR filter
+    % later on considering the relative delays betweeen eigenrays)
+    propagation_time(i,1) = eigenrays(i,1).t(end); % direct path
+    propagation_time(i,2) = eigenrays(i,2).t(end); % reflected path
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Calculate ground reflection
     % The ground reflection factor is required for the transfer function
     % calculation. It is 1 by default. It can either be a singe value or a
     % complex-valued vector with same length as the frequency vector.
-
+    % ex from template: 
     % propagationModel.groundReflectionFactor = 0.9 * ones(size(propagationModel.frequencyVector)); % example from template
-
-    % sigma_e_dict = {
-    %     'snow': 25.,
-    %     'forest': 50.,
-    %     'grass': 250.,
-    %     'dirt_roadside': 500.,
-    %     'dirt': 5000,
-    %     'asphalt': 10000,
-    %     'concrete': 50000
-    %     }
 
     % find idx corresponding to reflection coordinate (i.e. point where reflected ray meets the ground at z = 0)
     idx_reflection = find( eigenrays(i, 2).r.z == 0 );  
@@ -247,7 +278,7 @@ for i = 1:size(source,1)
      %                                            |                                             |                                                |
      %                                          -y - phi = 270                           |                                              -z-axis - theta = 180
 
-    % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.17743/jaes.2017.0033) 
+    % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.14279/depositonce-5718.5)
     % Fabian angle convention is receiver-based (spherical coordinates): theta = 0°  alligns
     % with x-axis and increases till 90° points upwards (northpole). After
     % that, decrease till
@@ -292,6 +323,19 @@ for i = 1:size(source,1)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end
+
+%% assign outputs
+
+% get spherical angles for output - angles already converted to the
+% spherical coordinates system used by the FABIAN database (phi= azimuth angle,
+% and theta = elevation angle)
+% with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
+OUT.spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
+launchAngle_reflected_spherical_smooth = smoothdata(launchAngle_reflected_spherical, 'movmean', 10);
+OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical_smooth;  
+
+OUT.propagation_time = propagation_time;
+OUT.TF = TF;
 
 clear idx_reflection hypotenuse;
 
@@ -412,7 +456,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,1), '-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    a = xline( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -429,10 +473,12 @@ if show == 1
     ax1.GridLineStyle = '--';
     ax1.GridAlpha = 0.15;
 
+    legend(a , 'Overhead', 'Location', 'NE');
+
 % second tile - elevation angle
     ax2 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,2), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    xline( xx(overhead_idx), 'k--' );
 
     ylim([0 90]);          
     yticks([0 30 60 90]);
@@ -443,8 +489,6 @@ if show == 1
     ax2.YGrid = 'on';
     ax2.GridLineStyle = '--';
     ax2.GridAlpha = 0.15;
-
-    legend(a , 'Overhead', 'Location', 'NE');
 
     set( gcf,'color','w');
 
@@ -468,7 +512,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_reflected_spherical(:,1), '-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    a = xline( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -485,10 +529,13 @@ if show == 1
     ax1.GridLineStyle = '--';
     ax1.GridAlpha = 0.15;
 
+    legend(a , 'Overhead', 'Location', 'NE');
+
 % second tile - elevation angle
     ax2 = nexttile;
-    plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    b = plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
+    c = plot( xx, launchAngle_reflected_spherical_smooth(:,2), 'r-'); hold on;
+    xline( xx(overhead_idx), 'k--' );
 
     ylim([-90 0]);          
     yticks([-90 -60 -30 0]);
@@ -500,7 +547,7 @@ if show == 1
     ax2.GridLineStyle = '--';
     ax2.GridAlpha = 0.15;
 
-    legend(a , 'Overhead', 'Location', 'NE');
+    legend( [b,c], {'ART','Smoothed'}, 'Location', 'SE');
 
     set( gcf,'color','w');
 

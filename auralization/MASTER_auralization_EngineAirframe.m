@@ -1,5 +1,4 @@
 function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_profile, smoothing, input_type, tag_auralization, show)
-%
 % function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_profile, smoothing, input_type, tag_auralization, show)
 %
 % INPUTS:
@@ -52,7 +51,19 @@ pref = 20e-6;
 
 % sampling frequency used for auralization
 global fs
-fs = str2double( input_file.sampling_freq );                       
+
+if isfield( input_file, 'sampling_freq' )
+    fs = str2double( input_file.sampling_freq ); % get <fs> from <input_file>
+else
+    fs = 48000; %default value
+end    
+
+% define default for <binaural_signal>
+if isfield( input_file, 'binaural_signal' )
+    binaural_signal = str2double ( input_file.binaural_signal );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection
+else
+    binaural_signal = 0; % default value
+end
 
 % time resolution from PANAM. Assumes it is constant (source noise prediction dt from PANAM is usually .5 seconds and cte) - ACHTUNG: this is the case only for sound source   
 global dt_panam
@@ -121,99 +132,98 @@ end
 % sound(OverallSignal,44100,24);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Post process auralized signal 
-% - auralized emission signal:  apply propagation and save output (.wav and vector)  
-% - auralized immission signal:  save output (.wav and vector) 
+%% Post process auralized signal
+% - auralized emission signal:  apply propagation and save output (.wav and vector)
 
-switch input_type
-    
-    case 'emission' % synthesized source signals are propagated, auralized and saved
-         %%
-         
-         % save final (EMISSION) auralized signal
-         OutputAuralization.emission.overallSignal = auralizedOverallSignal;
+% case 'emission' % synthesized source signals are propagated, auralized and saved
 
-         OutputAuralization.emission.engineSignal = auralizedEngineSignal;
-         OutputAuralization.emission.tonalSignalFanHarmonics = TonalSignal_FanHarmonics;
-         OutputAuralization.emission.tonalSignalBuzzsaw = TonalSignal_Buzzsaw;
-         OutputAuralization.emission.broadbandSignal_engine = BroadbandSignal_engine;
+% save final (EMISSION) auralized signal
+OutputAuralization.emission.overallSignal = auralizedOverallSignal;
 
-         OutputAuralization.emission.auralizedAirframeSignal = auralizedAirframeSignal;
+OutputAuralization.emission.engineSignal = auralizedEngineSignal;
+OutputAuralization.emission.tonalSignalFanHarmonics = TonalSignal_FanHarmonics;
+OutputAuralization.emission.tonalSignalBuzzsaw = TonalSignal_Buzzsaw;
+OutputAuralization.emission.broadbandSignal_engine = BroadbandSignal_engine;
 
-        % plot propagation graphs?
-        show_propagation = 1; % plot propagation results
-        
-        % FFT length used for freq vector of atmospheric transfer
-        % function and as nTaps of the FIR filter of atmospheric transfer function        
-        % nfft =  2^14;
-        % nfft = round(fs*dt_panam);  
-        nfft = str2double( input_file.nfft );    
+OutputAuralization.emission.auralizedAirframeSignal = auralizedAirframeSignal;
 
-        % get propagation freq response using ray-tracing (ART)
-        emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART
-        receiver = [ (input{1}.xobs) (input{1}.yobs) (input{1}.zobs) ]; % receiver position
-        transferFunction = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
-        
-        % apply propagation
+% plot propagation graphs?
+show_propagation = 1; % plot propagation results
 
-        % consider ground reflection
-        considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection 
+% FFT length used for freq vector of atmospheric transfer
+% function and as nTaps of the FIR filter of atmospheric transfer function
+% nfft = round(fs*dt_panam);
+% nfft = str2double( input_file.nfft );
+nfft = fs*2; % to yield df=0.5 Hz. needs to be fine, otherwise ground reflection effects are not well described
 
-        tag_source = 'engineSignal';
-        engineSignal = apply_propagation_FIR1( auralizedEngineSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+% get propagation freq response using ray-tracing (ART)
+emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART
+receiver = [ (input{1}.xobs) (input{1}.yobs) (input{1}.zobs) ]; % receiver position
+OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
 
-        tag_source = 'airframeSignal';
-        airframeSignal = apply_propagation_FIR1( auralizedAirframeSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
+% apply propagation
 
-        tag_source = 'overallSignal';
-        overallSignal = apply_propagation_FIR1( auralizedOverallSignal, transferFunction, nfft, show, tag_auralization, tag_source, considerGroundReflection );
-
-        % save final auralized signal
-        OutputAuralization.engineSignal = engineSignal;
-        OutputAuralization.airframeSignal = airframeSignal;
-        OutputAuralization.overallSignal = overallSignal;
-        
-        % save .wav
-        
-        % attenuation factor (changes dBFS of the written .wav file)
-        AttenuationdB = str2double ( input_file.attenuation_db );
-        %          AttenuationdB = -10; % so +1/-1 amplitude corrsponds to 104 dB SPL
-        
-        fileTag = '_overallSignal';
-        save_wav( overallSignal, fs, AttenuationdB, fileTag, tag_auralization );        
-      
-        fileTag = '_engineSignal';
-        save_wav( engineSignal, fs, AttenuationdB, fileTag, tag_auralization );
-
-        fileTag = '_airframeSignal';
-        save_wav( airframeSignal, fs, AttenuationdB, fileTag, tag_auralization );
-
-    case 'immission' % synthesized signals at the receiver are saved
-        
-        % Outputs in vector format
-        OutputAuralization.engineSignal = auralizedEngineSignal;
-        OutputAuralization.airframeSignal = auralizedAirframeSignal;
-        OutputAuralization.overallSignal = auralizedOverallSignal;
-        
-        % write .wav file
-        
-        % attenuation factor (changes dBFS of the written .wav file)
-        AttenuationdB = str2double ( input_file.attenuation_db );
-        %          AttenuationdB = -10; % so +1/-1 amplitude corrsponds to 104 dB SPL
-        
-        % EngineSignal
-        fileTag = '_engineSignal';
-        save_wav( auralizedEngineSignal, fs, AttenuationdB, fileTag, tag_auralization )
-        
-        % AirframeSignal
-        fileTag = '_airframeSignal';
-        save_wav( auralizedAirframeSignal, fs, AttenuationdB, fileTag, tag_auralization )
-        
-        % OverallSignal
-        fileTag = '_overallSignal';
-        save_wav( auralizedOverallSignal, fs, AttenuationdB, fileTag, tag_auralization )
-        
+% consider ground reflection
+if isfield( input_file, 'consider_ground_reflection' )
+    considerGroundReflection = str2double ( input_file.consider_ground_reflection );   % boolean : 0= only direct path; 1 = direct path + 1st order reflection
+else
+    considerGroundReflection = 1; % default value
 end
+
+tag_source = 'engineSignal';
+engineSignal = apply_propagation(auralizedEngineSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection ); % <- binaural truncated to zero
+
+tag_source = 'airframeSignal';
+airframeSignal = apply_propagation(auralizedAirframeSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection ); % <- binaural truncated to zero
+
+tag_source = 'overallSignal';
+% overallSignal = apply_propagation_FIR1( auralizedOverallSignal, OUT_rayTracing.TF, show, tag_auralization, tag_source, considerGroundReflection );
+overallSignal = apply_propagation(auralizedOverallSignal, OUT_rayTracing, binaural_signal, show, tag_auralization, tag_source, considerGroundReflection );
+
+% save final auralized signal (mono signals)
+OutputAuralization.engineSignal = engineSignal.outputSignal;
+OutputAuralization.airframeSignal = airframeSignal.outputSignal;
+OutputAuralization.overallSignal = overallSignal.outputSignal;
+
+% attenuation factor (changes dBFS of the written .wav file)
+if isfield( input_file, 'AttenuationdB' )
+    AttenuationdB = str2double ( input_file.attenuation_db );  % get <AttenuationdB> from <input_file>
+else
+    AttenuationdB = 0; % default value
+end
+
+% save .wav
+fileTag = '_engineSignal';
+save_wav( engineSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
+
+fileTag = '_airframeSignal';
+save_wav( airframeSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
+
+fileTag = '_overallSignal';
+save_wav( overallSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralization );
+
+% binaural signal
+
+if binaural_signal == 1
+
+    % save final auralized signal (stereo signals)
+    OutputAuralization.engineSignal_binaural = engineSignal.outputSignal_binaural;
+    OutputAuralization.airframeSignal_binaural = airframeSignal.outputSignal_binaural;
+    OutputAuralization.overallSignal_binaural = overallSignal.outputSignal_binaural;
+
+    % save .wav
+    fileTag = '_engineSignal_binaural';
+    save_wav( engineSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+    fileTag = '_airframeSignal_binaural';
+    save_wav( airframeSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+    fileTag = '_overallSignal_binaural';
+    save_wav( overallSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+
+end
+
+%% end
 
 % fprintf('\n- Total auralization (%s-based) time (including processes above):\t%f sec\n', input_type, toc);
 fprintf('*--------------------------------------------------------------------------*\n');
