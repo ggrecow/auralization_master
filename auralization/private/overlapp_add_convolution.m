@@ -48,7 +48,7 @@ switch type
     case 'stereo'
 
         % get size of the FIR filter
-        nTaps = size(IR.l_a,1);
+        nTaps = size(IR.left_ear,1);
 
         % allocate output signal
         outputSignal = zeros(BlockLen*L+nTaps-1, 2);
@@ -58,12 +58,11 @@ switch type
 
             outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) = ...
                                                                                                     outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) ...
-                                                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [[IR.l_a(:,ll) IR.r_a(:,ll)]; zeros(BlockLen-1, 2)]);
+                                                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [[IR.left_ear(:,ll) IR.right_ear(:,ll)]; zeros(BlockLen-1, 2)]);
 
         end
 
-
-end
+end % end <overlapp_add_convolution> function
 
 
 
