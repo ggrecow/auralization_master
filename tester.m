@@ -14,9 +14,10 @@ clear all; close all; clc;
 
 % input data
 core_path = [pwd '\input_data'];
+% core_path = [pwd '\input_data_dep']; % VR_dep
 
 % input_file
-input_file = [ core_path '\input_file_auralization.ini' ] ;
+input_file = [ core_path '\input_file_auralization.ini' ] ; 
 
 % case tag
 tag = 'VR_app'; % tag for plots and saving results/figs
@@ -24,5 +25,5 @@ tag = 'VR_app'; % tag for plots and saving results/figs
 %% call <auralization_framework>
 
 auralization_master(core_path); % no tag is provided, results folder will be called <auralization_results>
-% % auralization_master(core_path, tag); % no 'input_file' provided, the code will look for an input_file inside <core_path>
-% % auralization_master(core_path, tag, input_file); % no <results_path> provided, results will be saved inside <core_path>
+% auralization_master(core_path, tag); % no 'input_file' provided, the code will look for an input_file inside <core_path>
+% auralization_master(core_path, tag, input_file); % no <results_path> provided, results will be saved inside <core_path>
