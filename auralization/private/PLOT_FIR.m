@@ -1,5 +1,5 @@
 function PLOT_FIR( impulseResponse_FIR, FRF_ART, tBlock, fs, tag_auralization)
-% function PLOT_FIR( impulseResponse, tBlock, fs )
+% function PLOT_FIR( impulseResponse_FIR, FRF_ART, tBlock, fs, tag_auralization)
 %
 % This function plots the freq reponse of the FIR filter and compares to
 % the original one. Important to double check how good the FIR filters are.
@@ -70,15 +70,24 @@ ylabel('$10\cdot\log_{10}\left(|A_{\mathrm{atm}}|^2 \right)$','Interpreter','Lat
 xlim( [ 20 25e3 ] );
 ylim( [ -200 0 ] );
 
-legend([a, b], 'ART', sprintf('FIR - %.5g Taps', nTaps), 'Location', 'southwest');
-grid on;
-
 xticks([ 20 1e2 1e3 10e3 20e3 ]);
 xticklabels({'20','100','1k', '10k', '20k'});
 
 h = gca;
 h.YAxis.MinorTick = 'on'; % Must turn on minor ticks if they are off
 h.YAxis.MinorTickValues = -200:10:0; % Minor ticks which don't line up with majors
+
+if length(frequencyVector_FRF_ART) == length(frequencyVector_FIR)
+
+yyaxis right
+semilogx(frequencyVector_FRF_ART, 10.*log10(abs(FR_cut_single_side(:, tBlock)).^2) - 10.*log10(abs(FRF_ART(:, tBlock)).^2), '-', 'LineWidth', 0.5 );  
+ylim( [ -20 20 ] );
+ylabel('FIR-ART','Interpreter','Latex');
+
+end
+
+legend([a, b], 'ART', sprintf('FIR - %.5g Taps', nTaps), 'Location', 'southwest');
+grid on;
 
 set( gcf, 'color', 'w' );
 

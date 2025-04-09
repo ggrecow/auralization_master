@@ -217,7 +217,7 @@ end
 
 % define nTaps
 min_freq = 10; % in (Hz)
-nTaps = fs/min_freq;
+nTaps = fs;
 
 if considerGroundReflection == 1
 

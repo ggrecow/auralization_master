@@ -87,7 +87,7 @@ if size( P_FIR,1 ) == size( FRF_ART,1 ) % only plots delta if sizes (nTaps) are 
     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
 
     imagesc(T, frequencyVector_FIR, D); colorbar('vert'); set(gca,'YDir','Normal')
-    colormap('jet'); %clim([0 50]);
+    colormap('jet'); clim([0 50]);
 
     ylabel('Frequency, $f$ (Hz)','Interpreter','Latex');
     xlabel('Time bins','Interpreter','Latex');
