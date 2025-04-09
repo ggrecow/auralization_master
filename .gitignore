@@ -1,5 +1,6 @@
 *.fig
 *.wav
 *.pdf
+*.png
 input_data/results_auralization/*
 
