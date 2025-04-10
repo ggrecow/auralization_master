@@ -123,20 +123,27 @@ end
 
 transferFunction =  input.TF;
 
-% nTimes
+% get vector dimensions
 numTimeSteps = size(transferFunction, 1);
 numFreqBins_single_sided = size(transferFunction{1,1}.freq,1);
 numFreqBins_double_sided = 2 * (numFreqBins_single_sided - 1);  
 
 % Direct path
-TF_direct = zeros( numFreqBins_single_sided, numTimeSteps );
+TF_direct = zeros( numFreqBins_single_sided, numTimeSteps ); % declare variable
 
 for i = 1:numTimeSteps
     TF_direct(:,i) = transferFunction{i,1}.freq(:,1); % [nBins x nTimes]
 end
 
 % create double-sided spectra and take its IFFT
-TF_direct_double_sided = AKsingle2bothSidedSpectrum(TF_direct);
+% TF_direct_double_sided = AKsingle2bothSidedSpectrum(TF_direct);
+
+TF_direct_double_sided = zeros( numFreqBins_double_sided, numTimeSteps ); % declare variable
+
+for i = 1:numTimeSteps % loop over time steps
+    TF_direct_double_sided(:,i) =  [TF_direct(:,i); conj(flipud(TF_direct(2:end-1,i)))];
+end
+
 impulseResponse_direct  = ifft(TF_direct_double_sided, 'symmetric');
 
 % guarantee causal impulseResponses
@@ -145,7 +152,8 @@ impulseResponse_direct = il_makeCausal (impulseResponse_direct );
 % Reflected path
 if considerGroundReflection == 1
 
-    TF_reflected =zeros( numFreqBins_single_sided, numTimeSteps );
+    TF_reflected =zeros( numFreqBins_single_sided, numTimeSteps ); % declare variable
+    TF_combined =zeros( numFreqBins_single_sided, numTimeSteps );
 
     for i = 1:numTimeSteps
         TF_reflected(:,i) = transferFunction{i,1}.freq(:,2); % [nBins x nTimes]
@@ -153,11 +161,21 @@ if considerGroundReflection == 1
     end
 
     % create double-sided spectra and take its IFFT
-    TF_reflected_double_sided = AKsingle2bothSidedSpectrum(TF_reflected);
+    % TF_reflected_double_sided = AKsingle2bothSidedSpectrum(TF_reflected);
+
+    TF_reflected_double_sided = zeros( numFreqBins_double_sided, numTimeSteps ); % declare variable
+    TF_combined_double_sided = zeros( numFreqBins_double_sided, numTimeSteps ); % declare variable
+    for i = 1:numTimeSteps % loop over time steps
+        TF_reflected_double_sided(:,i) =  [TF_reflected(:,i); conj(flipud(TF_reflected(2:end-1,i)))];
+        TF_combined_double_sided(:,i) =  [TF_combined(:,i); conj(flipud(TF_combined(2:end-1,i)))];
+    end
+
     impulseResponse_reflected  = ifft(TF_reflected_double_sided, 'symmetric');
+    impulseResponse_combined  = ifft(TF_combined_double_sided, 'symmetric');
 
     % guarantee causal impulseResponses
     impulseResponse_reflected = il_makeCausal (impulseResponse_reflected );
+    impulseResponse_combined= il_makeCausal (impulseResponse_combined );
 
 end
 
@@ -217,11 +235,12 @@ end
 
 % define nTaps
 min_freq = 10; % in (Hz)
-nTaps = fs;
+nTaps = 2^14 ;
 
 if considerGroundReflection == 1
 
-    OUT.impulseResponse = il_truncate_FIR ( impulseResponse_direct + impulseResponse_reflected, nTaps);
+    OUT.impulseResponse = il_truncate_FIR ( impulseResponse_combined, nTaps);
+    % OUT.impulseResponse = il_truncate_FIR ( impulseResponse_direct + impulseResponse_reflected, nTaps);
 
     if binaural_signal == 1
         OUT.impulseResponse_binaural.left_ear = il_truncate_FIR ( impulseResponse_direct_binaural_leftEar + impulseResponse_reflected_binaural_leftEar, nTaps);
@@ -249,7 +268,7 @@ tBlock = round(numTimeSteps/2); % a time bin to plot the freq response of the FI
 if considerGroundReflection == 1
 
     % plot FIR for a fixed (single) source/receiver combination
-    PLOT_FIR( OUT.impulseResponse, TF_combined, tBlock, fs, [tag_auralization '_combined'] );
+    PLOT_FIR( OUT.impulseResponse, TF_combined, 52, fs, [tag_auralization '_combined'] );
 
     % plot FIR spectrogram
     PLOT_FIR_spectrogram(OUT.impulseResponse, TF_combined, fs, [tag_auralization '_combined'] );
