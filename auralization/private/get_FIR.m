@@ -234,8 +234,7 @@ end
 %% truncate FIR to nTaps 
 
 % define nTaps
-min_freq = 10; % in (Hz)
-nTaps = 2^14 ;
+nTaps = input.nfft ;
 
 if considerGroundReflection == 1
 

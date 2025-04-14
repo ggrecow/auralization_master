@@ -1,4 +1,4 @@
-function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+% function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 % function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
@@ -336,6 +336,7 @@ OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical_smoot
 
 OUT.propagation_time = propagation_time;
 OUT.TF = TF;
+OUT.nfft = nfft;
 
 clear idx_reflection hypotenuse;
 
@@ -613,4 +614,4 @@ if show == 1
 else
 end
 
-end
+% end
