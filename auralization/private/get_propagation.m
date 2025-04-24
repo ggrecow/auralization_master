@@ -1,4 +1,4 @@
-% function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
+ function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 % function OUT = get_propagation(input, receiver, nfft, time, emission_angle_panam, show, tag_auralization)
 %
 % This function computes the transfer function between the each position of the aircraft during 
@@ -113,14 +113,12 @@ global save_mat_fig
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 15.11.2024 - truncate receiver to a finite heigth
-% if receiver is flush mounted in the ground, ray-tracing will have trouble 
-% to find reflections. Gil have tested many options and increasing the ray
+% if receiver is flush mounted in the ground, ray-tracing will not
+% find reflections. Gil have tested many options and increasing the ray
 % tracing parameters (i.e. art.maxReceiverRadius and integrationTimeStep) 
 % does not really helps while substantially increases the computational time.
-% Truncating the receiver height to 1cm already overcomes the problem withouth
-% having to change the code too much. Another alternative would be to
-% double the direct path, but then what shall be done with the reflection
-% coefficient?
+% Truncating the receiver height to 1cm already overcomes the problem without
+% having to change the code too much. 
 if receiver(1,3)==0  % if receiver heigth is 0 m
     receiver(1,3) = 0.01; % truncate to 1 cm
 end
