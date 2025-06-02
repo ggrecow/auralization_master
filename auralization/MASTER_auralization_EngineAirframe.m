@@ -186,8 +186,8 @@ OutputAuralization.airframeSignal = airframeSignal.outputSignal;
 OutputAuralization.overallSignal = overallSignal.outputSignal;
 
 % attenuation factor (changes dBFS of the written .wav file)
-if isfield( input_file, 'AttenuationdB' )
-    AttenuationdB = str2double ( input_file.attenuation_db );  % get <AttenuationdB> from <input_file>
+if isfield( input_file, 'attenuation_db' )
+    AttenuationdB = str2double ( input_file.attenuation_db );  % get <attenuation_db> from <input_file>
 else
     AttenuationdB = 0; % default value
 end
