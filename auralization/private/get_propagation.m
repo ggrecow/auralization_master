@@ -405,8 +405,8 @@ if show == 1
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_propagation_reflected_ray_parameters');
-        save_pdf = 1; save_png = 0;
-        export_figures( filename, save_mat_fig, save_png, save_pdf );
+        save_pdf = 1; save_png = 0; save_mat_fig_positive = 1;
+        export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
 
     %% plot - compare launch angles from PANAM and ART
@@ -439,7 +439,7 @@ if show == 1
     else
         filename = strcat(tag_auralization, '_ART_emission_angle');
         save_pdf = 1; save_png = 0;
-        export_figures( filename, save_mat_fig, save_png, save_pdf );
+        export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
 
     %% plot angles of direct ray in spherical coordinates (FABIAN database - angles used for HRTF)
@@ -606,7 +606,7 @@ if show == 1
     else
         filename = strcat(tag_auralization, '_atmospheric_transfer_function_overhead');
         save_pdf = 1; save_png = 0;
-        export_figures( filename, save_mat_fig, save_png, save_pdf );
+        export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
 
 else
