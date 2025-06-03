@@ -133,26 +133,65 @@ source = [input.x input.y input.z];
 
 %% Define atmosphere
 
-atmos = StratifiedAtmosphere; % declare StratifiedAtmosphere class
+if isfield( input_file, 'sounding_filepath' ) % if exists, then atmosphere conditions are imported from external input
 
-% wind settings
-atmos.windProfile = input_file.wind_profile;          % String: 'zero', 'constant', 'log'
+    atmos = StratifiedAtmosphere.fromWeatherFile( input_file.sounding_filepath );
 
-% atmos.constWindVelocity = str2double( input_file.const_wind_velocity );         % Wind velocity for Const Wind Profile [m/s]
-% atmos.constWindDirection = str2double( input_file.const_wind_direction );  % Normal in wind direction [x y z]
-% atmos.surfaceRoughness = str2double( input_file.surface_roughness );        % Surface Roughness for Log Wind Profile [m]
-% atmos.frictionVelocity = str2double( input_file.friction_velocity );             % Friction velocity for Log Wind Profile [m/s]
+    temperatureCelsius = atmos.temperature(0) - 273.15;    % get temperature at ground level, in Celsius
 
-% temperature settings
-atmos.temperatureProfile =  input_file.temperature_profile;   % String: 'constant', 'isa'
-temperatureCelsius = str2double( input_file.temperature_celsius ); % Temperature in degree Celsius
-atmos.constTemperature = temperatureCelsius + 273.15;    % Temperature for Const mode [K]
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % % check values at specific height (m)
+    % fprintf( 'Temperature at 100m: %d K\n', atmos.temperature(100) );
+    % fprintf( 'Pressure at 100m: %d Pa\n', atmos.p0(100) );
+    % fprintf( 'Humidity at 100m: %d %\n', atmos.humidity(100) );
+    % fprintf( 'wind at 100m: %d m/s\n', atmos.v(100) );
+    % 
+    % % plot temp x altitude
+    % figure
+    % altitude_vector = 1:1000;
+    % plot(atmos.temperature(altitude_vector),altitude_vector);
+    % xlabel('Temperature (K)'); ylabel('Height (m)');
+    % 
+    % % plot Pressure x altitude
+    % figure
+    % plot(atmos.p0(altitude_vector),altitude_vector);
+    % xlabel('Pressure (Pa)'); ylabel('Height (m)');
+    % 
+    % % plot humidity x altitude
+    % figure
+    % plot(atmos.humidity(altitude_vector),altitude_vector);
+    % xlabel('Relative humidity (%)'); ylabel('Height (m)');
+    % 
+    % % plot wind x altitude
+    % figure
+    % plot(atmos.v(altitude_vector),altitude_vector);
+    % xlabel('windy (%)'); ylabel('Height (m)'); legend('x','y','z');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-atmos.constStaticPressure = str2double( input_file.const_static_pressure ); % Static pressure used in a constant temperature profile [Pa]
+else % atmosphere is defined by specific input parameters from input_file (currently only supports constant atmosphere values) - look at ARTTutorial_StratifiedAtmosphere.m for more examples
 
-% humidity settings
-atmos.humidityProfile = input_file.humidity_profile;  % String: 'constant'
-atmos.constRelHumidity = str2double( input_file.const_rel_humidity );        % Constant Realitive Humidity [%]
+    atmos = StratifiedAtmosphere; % declare StratifiedAtmosphere class
+
+    % wind settings
+    atmos.windProfile = input_file.wind_profile;          % String: 'zero', 'constant', 'log'
+
+    % atmos.constWindVelocity = str2double( input_file.const_wind_velocity );         % Wind velocity for Const Wind Profile [m/s]
+    % atmos.constWindDirection = str2double( input_file.const_wind_direction );  % Normal in wind direction [x y z]
+    % atmos.surfaceRoughness = str2double( input_file.surface_roughness );        % Surface Roughness for Log Wind Profile [m]
+    % atmos.frictionVelocity = str2double( input_file.friction_velocity );             % Friction velocity for Log Wind Profile [m/s]
+
+    % temperature settings
+    atmos.temperatureProfile =  input_file.temperature_profile;   % String: 'constant', 'isa'
+    temperatureCelsius = str2double( input_file.temperature_celsius ); % Temperature in degree Celsius
+    atmos.constTemperature = temperatureCelsius + 273.15;    % Temperature for Const mode [K]
+
+    atmos.constStaticPressure = str2double( input_file.const_static_pressure ); % Static pressure used in a constant temperature profile [Pa]
+
+    % humidity settings
+    atmos.humidityProfile = input_file.humidity_profile;  % String: 'constant'
+    atmos.constRelHumidity = str2double( input_file.const_rel_humidity );        % Constant Realitive Humidity [%]
+
+end
 
 %% Define propagation model
 
