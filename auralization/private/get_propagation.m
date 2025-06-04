@@ -386,31 +386,25 @@ if show == 1
     % time vector
     xx = time;
 
-    % overhead_idx = round(length(TF)/2); % one source/receiver combination
-    % [~, overhead_idx] =  min(propDistanceReflectedRay); % one source/receiver combination (overhead aircraft position)
-    [~, overhead_idx] =  max(rad2deg (thetaReflectedRay)); % one source/receiver combination (overhead aircraft position)
+    % Find minimum distance between source/receiver - gives overhead aircraft position
+    [~, overhead_idx] = min(vecnorm(source - receiver, 2, 2));
 
     % eigenrays.plot(); % ART function - blackbox plot function from ART
     % PLOT_eigenrays(receiver, source, eigenrays); % self-programmed plot eigenrays function
     
     %% plot TF "spectrogram"
     
-    % spectrogram
+    % att_direct = zeros( size(freq,2), size(source,1) );
+    % att_reflected = zeros( size(freq,2), size(source,1) );
+    att_combined = zeros( size(freq,2), size(source,1) );
 
-    % att_direct = zeros( size(freq,1), size(source,1) );
-    % att_reflected = zeros( size(freq,1), size(source,1) );
-    % att_combined = zeros( size(freq,1), size(source,1) );
+    for i = 1:size(source,1) % convert to dB
 
-    % for i = 1:size(source,1) % convert to dB
-    %     att_direct(:,i) = 10.*log10( abs( TF{i,1}.freq(:,1) ).^2.);
-    %     att_reflected(:,i) = 10.*log10( abs( TF{i,1}.freq(:,2) ).^2 );
-    %     att_combined(:,i) = 10.*log10( abs( TF{i,1}.freq(:,3) ).^2 );
-    % 
-    %     % pref = 2e-5;
-    %     % att_direct(:,i) = 10.*log10( abs( TF{i,1}.freq(:,1) ).^2./pref^2 );
-    %     % att_reflected(:,i) = 10.*log10( abs( TF{i,1}.freq(:,2) ).^2./pref^2 );
-    %     % att_combined(:,i) = 10.*log10( abs( TF{i,1}.freq(:,3) ).^2 ./pref^2 );
-    % end
+        % att_direct(:,i) = 10.*log10( abs( TF{i,1}.freq(:,1) ).^2.);
+        % att_reflected(:,i) = 10.*log10( abs( TF{i,1}.freq(:,2) ).^2 );
+        att_combined(:,i) = ( 10.*log10( abs( TF{i,1}.freq(:,3) ).^2 ) );
+
+    end
 
     % tag_title =  'OUTPUT - transfer function (direct path)';
     % PLOT_transfer_function(xx, freq, att_direct, tag_title)
@@ -418,8 +412,21 @@ if show == 1
     % tag_title =  'OUTPUT - transfer function (1st order reflection)';
     % PLOT_transfer_function(xx, freq, att_reflected, tag_title)
     % 
-    % tag_title =  'OUTPUT - transfer function (direct path + 1st order reflection)';
-    % PLOT_transfer_function(xx, freq, att_combined, tag_title)
+    tag_title =  'OUTPUT - transfer function (direct path + 1st order reflection)';
+    PLOT_transfer_function(xx, freq, att_combined, tag_title)
+
+    save_mat_fig_positive = 1;
+    if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
+    else
+        filename = strcat(tag_auralization, '_atmospheric_transfer_function_spectrogram');
+        save_pdf = 1; save_png = 0;
+        export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
+    end
+
+    % outputs variables for post-processing (ex, comparative plots)
+    output_struct.spectrogram.att_combined = att_combined;
+    output_struct.spectrogram.time = xx;
+    output_struct.spectrogram.freq = freq;
 
     %% plot incidence angle theta and propagation distance of the reflected ray
 
@@ -444,9 +451,13 @@ if show == 1
     if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
     else
         filename = strcat(tag_auralization, '_propagation_reflected_ray_parameters');
-        save_pdf = 1; save_png = 0; save_mat_fig_positive = 1;
+        save_pdf = 1; save_png = 0;  
         export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
+
+    % outputs variables for post-processing (ex, comparative plots)
+    output_struct.thetaReflectedRay = thetaReflectedRay;
+    output_struct.propDistanceReflectedRay =  propDistanceReflectedRay;
 
     %% plot - compare launch angles from PANAM and ART
 
@@ -480,6 +491,9 @@ if show == 1
         save_pdf = 1; save_png = 0;
         export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
+
+    % outputs variables for post-processing (ex, comparative plots)
+    output_struct.launchAngle_direct = launchAngle_direct;
 
     %% plot angles of direct ray in spherical coordinates (FABIAN database - angles used for HRTF)
 
@@ -607,11 +621,6 @@ if show == 1
     att_reflected = 10.*log10( abs( TF{overhead_idx,1}.freq(:,2) ).^2 );
     att_combined = 10.*log10( abs( TF{overhead_idx,1}.freq(:,3) ).^2 );
 
-    % pref = 2e-5; % reference sound pressure
-    % att_direct = 10.*log10( abs( TF{overhead_idx,1}.freq(:,1) ).^2./pref^2 );
-    % att_reflected = 10.*log10( abs( TF{overhead_idx,1}.freq(:,2) ).^2./pref^2 );
-    % att_combined = 10.*log10( abs( TF{overhead_idx,1}.freq(:,3) ).^2 ./pref^2 );
-
     h  = figure;
     set(h, 'name', 'OUTPUT - atmospheric transfer function' );
     set(h,'Units','Inches');
@@ -647,6 +656,16 @@ if show == 1
         save_pdf = 1; save_png = 0;
         export_figures( filename, save_mat_fig_positive, save_png, save_pdf );
     end
+
+    % outputs variables for post-processing (ex, comparative plots)
+    output_struct.att_direct = att_direct;
+    output_struct.att_reflected = att_reflected;
+    output_struct.att_combined = att_combined;
+
+    % save output struct 
+    [parentPath, ~, ~] = fileparts(tag_auralization);
+    fullPath = fullfile(parentPath, 'get_propagation');
+    save(fullPath, 'output_struct');
 
 else
 end
