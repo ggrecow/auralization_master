@@ -220,6 +220,7 @@ art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
 TF = cell (size(source,1),1);  
 thetaReflectedRay = zeros(size(source,1),1);
 propDistanceReflectedRay = zeros(size(source,1),1);
+propDistanceDirectRay = zeros(size(source,1),1);
 launchAngle_direct = zeros(1, size(source,1));
 launchAngle_reflected = zeros(1, size(source,1));
 launchAngle_direct_spherical = zeros(size(source,1), 2);
@@ -281,7 +282,10 @@ for i = 1:size(source,1)
     thetaReflectedRay(i) = asin( norm( source(i,3) ) / hypotenuse ); 
 
     % total propagation distance of the ground reflected ray [m]
-    propDistanceReflectedRay(i) =  eigenrays(i, 2).pathLength(); 
+    propDistanceReflectedRay(i) =  eigenrays(i, 2).pathLength();
+
+    % total propagation distance of the direct ray [m]
+    propDistanceDirectRay(i) =  eigenrays(i, 1).pathLength();
 
     propagationModel.groundReflectionFactor = get_ground_reflection_coefficient( propagationModel.frequencyVector,... % freq (row) vector
                                                                                                sigma_e, ... % effective flow resistance [kPa/m^2.s]
@@ -458,7 +462,8 @@ if show == 1
     % outputs variables for post-processing (ex, comparative plots)
     output_struct.thetaReflectedRay = thetaReflectedRay;
     output_struct.propDistanceReflectedRay =  propDistanceReflectedRay;
-
+    output_struct.propDistanceDirectRay = propDistanceDirectRay;
+    
     %% plot - compare launch angles from PANAM and ART
 
     h  = figure;
