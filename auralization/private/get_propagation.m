@@ -392,6 +392,7 @@ if show == 1
 
     % Find minimum distance between source/receiver - gives overhead aircraft position
     [~, overhead_idx] = min(vecnorm(source - receiver, 2, 2));
+    output_struct.overhead_idx = overhead_idx;
 
     % eigenrays.plot(); % ART function - blackbox plot function from ART
     % PLOT_eigenrays(receiver, source, eigenrays); % self-programmed plot eigenrays function
