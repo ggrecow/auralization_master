@@ -19,13 +19,13 @@ established by combining the aforementioned propagation effects and the phase-sh
 
 **References**
 
-[1] L. Bertsch, Noise Prediction within Conceptual Aircraft Design. Doctoral thesis, Technische Universität Braunschweig, 2013. DOI: [10.34912/n0is3-d3sign](https://doi.org/10.34912/n0is3-d3sign).
+[1] L. Bertsch, Noise Prediction within Conceptual Aircraft Design. Doctoral thesis, Technische Universität Braunschweig, 2013. DOI: [10.34912/n0is3-d3sign](https://doi.org/10.34912/n0is3-d3sign)
 
 [2] M. P. Allen, Analysis and synthesis of aircraft engine fan noise for use in psychoacoustic studies. Master thesis, Virginia Polytechnic Institute and State University, 2012
 
 [3] P. Schäfer and M. Vorländer, Atmospheric ray tracing: an efficient, open-source framework for finding eigenrays in a stratified, moving medium, Acta Acust., vol. 5, p. 26, 2021. DOI: [10.1051/aacus/2021018](https://doi.org/10.1051/aacus/2021018)
 
-[4]  F. Brinkmann, A. Lindau, S. Weinzierl, G. Geissler, S. van de Par, M. Müller-Trapet, R. Opdam, and M. Vorländer, The FABIAN head-related transfer function data base, Data repository,” 2020. DOI: [10.14279/depositonce-5718.5](https://doi.org/10.14279/depositonce-5718.5).
+[4]  F. Brinkmann, A. Lindau, S. Weinzierl, G. Geissler, S. van de Par, M. Müller-Trapet, R. Opdam, and M. Vorländer, The FABIAN head-related transfer function data base, Data repository, 2020. DOI: [10.14279/depositonce-5718.5](https://doi.org/10.14279/depositonce-5718.5).
 
 # References
 
@@ -36,17 +36,13 @@ The auralization framework is comprehensively described and used in:
 
 # Licensing
 
-This software is licensed under the **Apache License 2.0**.  
-You are free to use, modify, and distribute this software under the terms of the license.  
+This software is licensed under the **Apache License 2.0**. You are free to use, modify, and distribute this software under the terms of the license.  
 
 See the [LICENSE](LICENSE) file for the full license text.  
 
----
-
 ## Dependencies
 
-This software is distributed together with several third-party packages and datasets for convenience.  
-All of these components are provided in their **original, unmodified forms** and remain under their own licenses (that is, they are **not covered by the Apache License 2.0**):
+This software is distributed together with several third-party packages and datasets for convenience. All of these components are provided in their **original, unmodified forms** and remain under their own licenses (that is, they are **not covered by the Apache License 2.0**):
 
 - **ARTMatlab** — Apache License 2.0  
   [Apache License](https://www.apache.org/licenses/LICENSE-2.0.txt)  
@@ -69,6 +65,5 @@ All of these components are provided in their **original, unmodified forms** and
   [DepositOnce Repository](https://depositonce.tu-berlin.de/items/3b423df7-a764-4ce1-9065-4e6034bba759)  
   *Attribution is required when using this dataset.*  
 
-For the full license texts and attribution details of these components, please refer to the  
-[`LICENSES.md`](LICENSES.md) file.
+For the full license texts and attribution details of these components, please refer to the [`LICENSES.md`](LICENSES.md) file.
 
