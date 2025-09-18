@@ -1,0 +1,12 @@
+{
+    "title": "Sound quality analysis of virtual aircraft prototypes: auralization framework", 
+    "creators": [
+        {
+            "orcid": "0000-0002-9484-8955", 
+            "affiliation": "Institut für Akustik und Dynamik, Technische Universität Braunschweig, Germany", 
+            "name": "Gil Felix Greco"
+        }
+    ],
+    "license": "Apache-2.0",
+    "keywords": ["Aircraft noise","Auralization","Sound synthesis","Acoustics","Virtual acoustics"]
+}
