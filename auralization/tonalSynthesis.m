@@ -44,6 +44,11 @@ function TonalSignal = tonalSynthesis(input, time_PANAM, time, show, tag_auraliz
 %   contains the synthesised signal composed by the sum of the individual
 %   tones predicted by panam, in Pascal values over time
 %
+% This code is largely based on the work of:
+% M. P. Allen, Analysis and synthesis of aircraft engine fan noise for use 
+% in psychoacoustic studies. Master thesis, Virginia Polytechnic Institute 
+% and State University, 2012
+% 
 % Author: Gil Felix Greco, Braunschweig 20.06.2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

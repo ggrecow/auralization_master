@@ -46,8 +46,8 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %      - Doppler effect needs to be already included in EMISSION input data
 %      <'auralization_input.dat'>
 %     
-%      - For the auralization based on EMISSION data it is preferred to use panam predictions 
-%        with time-step 0.1 otherwise ground reflections are not correctly modelled. An interpolation  
+%      - It is preferred to use panam predictions 
+%        with time-step 0.1 otherwise ground reflections are not smoothly synthesized. An interpolation  
 %        of the flight trajectory used to compute the atmospheric transfer
 %        functions could be used to avoid that, however it was choosen not to do that because
 %        interpolating the flight trajectory is tricky as we have multiple dimensions 
@@ -86,7 +86,13 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %   position founded in the input data fom PANAM will be saved within separate folders automatically. 
 %   By default, results are saved within <main_input_path> if a <results_path> folder is not provided
 %
-% Author: Gil Felix Greco, 11.04.2024 - (last updated: 24.09.2024)
+% -------------------------------
+% Author: Gil Felix Greco (ggrecow@gmail.com)
+% Institution: Technische Universität Braunschweig 
+%
+% Date created: 11.04.2024
+% Date last modified: 19.09.2025
+% MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % run startup_SQAT_PANAM.m;

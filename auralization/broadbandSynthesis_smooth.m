@@ -41,6 +41,11 @@ function BroadbandSignal = broadbandSynthesis_smooth(input, source, time_PANAM, 
 %   BroadbandSignal : row vector [Nx1]
 %   synthesised signal, in Pascal values over time, which is only composed by broadband noise
 %
+% This code is largely based on the work of:
+% M. P. Allen, Analysis and synthesis of aircraft engine fan noise for use 
+% in psychoacoustic studies. Master thesis, Virginia Polytechnic Institute 
+% and State University, 2012
+%
 % Author: Gil Felix Greco, Braunschweig 30.06.2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
