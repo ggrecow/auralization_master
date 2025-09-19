@@ -1,1 +1,0 @@
-C:\Users\greco\Desktop\auralization_verification_thesis\input\2023_greco_testcase_doppler\fine_discretization\V-R\approach

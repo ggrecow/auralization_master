@@ -1,13 +1,22 @@
 function startup_auralization(bp)
 % function startup_auralization(bp)
 %
-% This scripts initialises the toolbox. As recommended by the authors, the
-%   added paths will be removed from the MATLAB directories when MATLAB is
-%   closed. This means that startup needs to be run once after MATLAB
-%   has started.
+% This scripts initialises the auralization framework. It includes all
+% necessary codes to the local MATLAB path and add any required third party
+% software required for its use. All required dependencies are distributed 
+% (in original form) and are located within the /third_party folder.
+% 
+% As recommended by the author to avoid any conflicts, the added paths will 
+% be removed from the MATLAB directories when MATLAB is closed. This means 
+% that startup needs to be run once after MATLAB has started.
 %
-% Author: Alejandro Osses
-% modified by Gil F. Greco, 20.11.2024
+% -------------------------------
+% Author: Gil Felix Greco (ggrecow@gmail.com)
+% Institution: Technische Universität Braunschweig 
+%
+% Date created: 20.11.2024
+% Date last modified: 19.09.2025
+% MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if nargin == 0
@@ -16,8 +25,7 @@ end
 
 addpath(bp);
 
-main_dirs = { 'auralization', ...
-                      'utilities'};
+main_dirs = { 'auralization', 'utilities' };
 
 %% add main_dirs
 
