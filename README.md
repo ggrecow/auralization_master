@@ -1,13 +1,15 @@
 
 # Framework for aircraft noise auralization 
 
-This repository contains MATLAB scripts that compose a framework for aircraft noise auralization. The framework deals with converting predictions from different partial sound sources onboard of an operational aircraft into sound pressure signals in time domain. 
+This repository contains MATLAB scripts that compose a framework for aircraft noise auralization. The framework deals with:
 
-An open-source ray-tracing software is incorporated into the frameowork to model sound propagation through inhomogeneous and moving atmospheres. 
+- converting predictions from different partial sound sources of an operational aircraft into sound pressure signals in time domain;
+- sound propagation modeling using an open-source ray-tracing software; and 
+- combining sound source descriptions with sound propagation effects to obtain auralized sound pressure signals at receiver positions on the ground.
 
-Finally, synthesized sound pressure signals corresponding to the sound source descriptions are combined with sound propagation effects to obtain auralized sound pressure signal at receiver positions on the ground.
+The framework was developed as part of a PhD research project and is maintained by [Gil Felix Greco](https://www.linkedin.com/in/gil-felix-greco-363985101/).
 
-## Overview
+# 1. Overview
 
 The **auralization framework** can be understood as a tool that transforms sound source descriptions into sound pressure signals at desired receiver positions. In its current form, the framework is particularly tailored to work with aircraft noise predictions provided by the well-established **Parametric Aircraft Noise Analysis Module (PANAM)** [1], an in-house software from the **German Aerospace Center (DLR)**. Nevertheless, it can be easily adapted to auralize other sound sources or handle input data from other modelling tools. 
 
@@ -15,11 +17,11 @@ In the following, a general overview about the framework is provided, of which m
 
 <img src="utilities/images/auralization_framework_repo.svg" alt="sound synthesis overview" width="1200">
 
-### Sound source description 
+## 1.1 Sound source description 
 
 Predictions related to the to the _aircraft trajectory_ and associated _performance_ and _sound emissions_ are provided by **PANAM**. Therefore, the framework does not have any control over the models used to describe the sound source. The sound emissions are provided in discrete time-steps (usually of $\Delta t = 0.1$ s), for which directional SPLs associated with a particular receiver position (assuming straight sound path connecting source/receiver) are provided for different componential sound sources, namely: **Airframe noise**, **Engine noise**, **Fan tonal noise** and **Buzzsaw noise**. **Important: sound emissions are provided already including Doppler effect.** 
 
-### Sound synthesis
+## 1.2 Sound synthesis
 
 Sound source descriptions are transformed into sound pressure signals in time domain using different techniques from [2]. Signals containing tonal components from the **Fan tonal noise** and **Buzzsaw noise** partial sound sources are obtained using _additive synthesis_. Signals containing broadband noise from the **Airframe noise**, **Engine noise** partial sound sources are obtained using _granular synthesis_. 
 
@@ -27,7 +29,7 @@ At the end of the synthesis procedure, sound signals from all partial sound sour
 
 <img src="utilities/images/synthesis_flowchart.svg" alt="sound synthesis overview" width="1200">
 
-### Sound propagation modeling 
+## 1.3 Sound propagation modeling 
 
 Sound propagation is modelled based on ray-tracing simulations in combination with different models. The open-source **Atmospheric Ray Tracing (ART)** software [3] is incorporated into the framework to simulate sound paths connecting the source and receiver positions, also known as _eigenrays_. Direct and 1st order reflected eigenrays are considered, for which inputs related to the aircraft trajectory and receiver positions, as well as atmospheric conditions (i.e. temperature, wind, relative humidity, and pressure) are necessary. 
 
@@ -39,22 +41,21 @@ The ART can account for sound _refraction_ and _advection_ caused by sound speed
 
 Finally, atmospheric transfer functions are established by combining the aforementioned propagation effects and the phase-shift caused by the propagation times of the direct and reflected sound paths. Thereby, the overall sound propagation effect is described in frequency domain for each combination of source and receiver positions considered within a discrete flight trajectory.
 
-### Receiver model
+## 1.4 Receiver model
 
 The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database. 
 
 Only measured HRTFs with zero-degree **Head-above Torso Orientation (HATO)** are considered in this work, meaning the head is aligned with the torso without any additional rotation in yaw, pitch or roll (i.e., looking
 straight ahead and not tilted up, down, or to the side, with ears at the same height). In the default case, the output audio is **stereo (one channel per ear)**, representing **binaural-dichotic signals** with the receiver assumed to be facing the sound source. The position of the head can be rotated in the horizontal plane if desired.  
 
-### Combining source descriptions with sound propagation effects 
+## 1.5 Combining source descriptions with sound propagation effects 
 
 In order to obtain the auralized sound pressure signal at the receiver, the synthesized signal of the aircraft noise emissions (including Doppler effect) is combined with the transfer functions of the direct and reflected sound paths. This
 is achieved using the overlap-add method [8] to perform a DFT-based block convolution. 
 
 This process is performed separately for the direct and reflected sound paths. The same sound source signal is used for the direct and reflected ray paths, which differ only by their atmospheric transfer functions. The resulting signals are then summed to yield a **monoaural diotic** auralized sound pressure signal at the receiver. If **binaural rendering** is considered, the resulting sound signals for the direct and reflected sound paths are individually convoluted with HRTFs (left and right ears) obtained based on sound incidence angles calculated during the ART simulation. The resulting stereo signals of the direct and reflected sound paths are summed to obtain the auralized sound pressure signals at the receiver for the left and right ears. The output signals **(mono or stereo)** are stored as .WAV files, with amplitude in Pascal units or any arbitrary full-scale.
 
-
-### References
+## 1.6 References
 
 [1] L. Bertsch, Noise Prediction within Conceptual Aircraft Design. Doctoral thesis, Technische Universität Braunschweig, 2013. DOI: [10.34912/n0is3-d3sign](https://doi.org/10.34912/n0is3-d3sign)
 
@@ -72,14 +73,41 @@ This process is performed separately for the direct and reflected sound paths. T
 
 [8] F. Wefers, Partitioned convolution algorithms for real-time auralization. Doctoral thesis, RWTH Aachen University, 2014. DOI: [10.18154/RWTH-2015-02185](https://doi.org/10.18154/RWTH-2015-02185).
 
-# References
+# 2. Framework architecture / Algorithmic overview
 
-Refer to the following publication for a comprehensive description of the auralization framework, as well its verification study and exemplary application:
+<!-- >  High-level description of the code structure:
+
+Main modules/folders
+
+Core classes/functions
+
+How data flows between them
+
+Include a diagram if possible (flowchart or block diagram).
+
+Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, how signals are processed. -->  
+
+# 3. How to use the framework / Quick start
+
+<!-- >  Installation instructions (dependencies, setup).
+
+Example scripts or functions for typical workflows.
+
+Input/output formats, including expected signal formats.
+
+Minimal working example (like a “hello world” for your framework). -->  
+
+# 4. References / How to cite this work
+
+This repository hosts the auralization framework developed and verified in the following PhD thesis, where the framework is described in detail together with its verification study and an exemplary application:
 
 > G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: framework development and application. Doctoral thesis, Technische Universität Braunschweig (to be published)
 
+<!-- > This is the main citation if you need to cite the repository itself:
 
-# Licensing
+> G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: auralization framework. Software repository, 2025. DOI: [10.5281/zenodo.7934709](https://doi.org/10.5281/zenodo.7934709) -->  
+
+# 5. Licensing
 
 This software is licensed under the **Apache License 2.0**. You are free to use, modify, and distribute this software under the terms of the license.  
 
@@ -111,4 +139,8 @@ This software is distributed together with several third-party packages and data
   *Attribution is required when using this dataset.*  
 
 For the full license texts and attribution details of these components, please refer to the [`LICENSES.md`](LICENSES.md) file.
+
+# Disclaimer
+
+This repository contains 'work in progress' code for a research project. It is not a completed package or code library. As per the licensing information, the code is published WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
