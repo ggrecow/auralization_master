@@ -89,6 +89,12 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 # 3. How to use the framework / Quick start
 
+1. Download or clone this repository to your local computer. One way to do that is to press the button 'Code' -> Choose 'Download ZIP' and unzip somewhere).
+
+2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
+   
+3. The `run_auralization.m` code provides examples on how to call the auralization framework.
+     
 <!-- >  Installation instructions (dependencies, setup).
 
 Example scripts or functions for typical workflows.
