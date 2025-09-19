@@ -8,5 +8,5 @@
         }
     ],
     "license": "Apache-2.0",
-    "keywords": ["Aircraft noise","Auralization","Sound synthesis","Acoustics","Virtual acoustics"]
+    "keywords": ["Aircraft noise","Virtual acoustics","Auralization","Sound synthesis","Acoustics"]
 }
