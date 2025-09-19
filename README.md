@@ -75,7 +75,35 @@ This process is performed separately for the direct and reflected sound paths. T
 
 # 2. Framework architecture / Algorithmic overview
 
-<!-- >  High-level description of the code structure:
+A high-level description of the code structure and input data is provided here.
+
+## 2.1 Input data
+
+-  `auralization_input.dat`: input file from PANAM providing the sound source descriptions for different sound sources, in terms of SPLs over discrete time steps along the aircraft trajectory. Sound emissions directional, meaning they are provided for each receiver position by considering a straight sound path between the source and receiver. Receiver positions and PANAM emission angles are extracted from there.
+-  `geschw_hoehe_verlauf.dat.dat`: Input file from PANAM providing the flight trajectory and corresponding operational conditions of the aircraft. Only used for plotting and for simulation of sound propagation using ray-tracing.
+-  `input_file.ini`: configuration file providing settings for auralization signal processing and defining the atmospheric properties used in the ray-tracing simulations. The settings used for atmospheric properties follows the same format defined by the ART software.
+
+Exemplary input data is provided within the `input_data` folder.
+
+## 2.2 Main functions and data flow
+
+- `auralization_master()` : main interface between input data and auralization functions. Main functions used here are:
+   - `ini2struct()` : read input file data
+   - `PANAM_SQAT_data_conversion()` : convert PANAM data to MATLAB structs
+   - `create_auralization_results_folder()` : create/define results folder
+   - `get_flight_profile()` : get flight trajectory inputs
+   - Start receiver loop
+      - `prepare_input_SQ()` : trim data based on defined auralization time
+      - `MASTER_auralization_EngineAirframe()` : main auralization functions
+         - `getTonalInput()` : prepare inputs to auralize tonal noise
+         - `tonalSynthesis()` : synthesis of tonal signals, used to auralize **fan harmonics** and **buzzsaw noise**
+         - `broadbandSynthesis_smooth()` : functions to convert 1/3-octave band spectrogram into narrowband noise, then get signals using granular synthesis
+         - `get_propagation()` : main function resposible to setup and perform sound propagation simulations using the ART software, output atmospheric transfer functions
+         - `apply_propagation()` : main function used to apply sound propagation effects on synthesized sound signals of aircraft (emissions + Doppler effect)
+            - `get_FIR()` : get **Finite Impulse Response (FIR)** filters associated with atmospheric transfer functions and HRTFs (if required)
+            - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
+         - `save_wav()` : export .WAV files for a desired full-scale 
+<!-- >   
 
 Main modules/folders
 
