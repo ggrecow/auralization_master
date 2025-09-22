@@ -10,26 +10,25 @@ under their own respective licenses.
 ---
 
 ## My Software
-- **License:** Apache License 2.0  
-- **Link:** https://www.apache.org/licenses/LICENSE-2.0.txt  
+- **License:** [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt) 
 
 ---
 
 ## ARTMatlab
-- **License:** Apache License 2.0  
-- **Link:** https://www.apache.org/licenses/LICENSE-2.0.txt  
+- **License:** [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt) 
+- **Link:** [https://www.virtualacoustics.org/GA/art/#download](https://www.virtualacoustics.org/GA/art/#download)
 
 ---
 
 ## ITA-Toolbox
-- **License:** Original BSD License  
-- **Link:** https://www.ita-toolbox.org/  
+- **License:** [Original BSD License](https://spdx.org/licenses/BSD-4-Clause.html)  
+- **Link:** [https://www.ita-toolbox.org/](https://www.ita-toolbox.org/) 
 - **Note:** Requires running `<ita_toolbox_setup.m>` after installation.  
 
 ---
 
 ## Faddeeva Package
-- **License:** BSD 2-Clause License  
+- **License:** [MIT License](https://en.wikipedia.org/wiki/MIT_License)
 - **Author:** Steven G. Johnson  
 - **Link:** https://www.mathworks.com/matlabcentral/fileexchange/38787-faddeeva-package-complex-error-functions  
 - **Note:** Requires running `<Faddeeva_build.m>` with MinGW64 (C++).  
@@ -37,7 +36,7 @@ under their own respective licenses.
 ---
 
 ## AKtools
-- **License:** European Union Public License (EUPL) v1.1  
+- **License:** [European Union Public License (EUPL) v1.1](https://interoperable-europe.ec.europa.eu/licence/european-union-public-licence-version-11-eupl)  
 - **Link:** https://github.com/f-brinkmann/AKtools  
 
 ---
