@@ -145,9 +145,9 @@ This repository hosts the auralization framework developed and verified in the f
 
 > G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: framework development and application. Doctoral thesis, Technische Universität Braunschweig (to be published)
 
-<!-- > This is the main citation if you need to cite the repository itself:
+This is the main citation if you need to cite the repository itself:
 
-> G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: auralization framework. Software repository, 2025. DOI: [10.5281/zenodo.7934709](https://doi.org/10.5281/zenodo.7934709) -->  
+> G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: auralization framework. Software repository, 2025. DOI: [10.5281/zenodo.17179379](https://doi.org/10.5281/zenodo.17179379) 
 
 # 5. Licensing
 
