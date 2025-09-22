@@ -1,13 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Sound quality analysis of virtual aircraft prototypes: auralization framework"
-version: 1.0
-doi: 10.5281/zenodo.17179379
-date-released: 2025-09-22
 authors:
 - family-names: "Felix Greco"
   given-names: "Gil"
   orcid: "https://orcid.org/0000-0002-9484-8955"
-license: "Apache-2.0",
-keywords: ["Aircraft noise","Virtual acoustics","Auralization","Sound synthesis","Acoustics","MATLAB"]
+title: "Sound quality analysis of virtual aircraft prototypes: auralization framework"
+version: 1.0
+doi: 10.5281/zenodo.17179379
+
+date-released: 2025-09-22
 url: "https://github.com/ggrecow/auralization_master"
