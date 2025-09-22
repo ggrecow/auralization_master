@@ -95,7 +95,7 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% run startup_SQAT_PANAM.m;
+%% Deal with input args
 
 main_input_path = [main_input_path_in filesep];
 
@@ -103,7 +103,8 @@ if nargin < 2
     tag = 'auralization_results';
 end
 
-%% if no <input_file_path>, then we will look for the .ini file inside <main_input_path>
+% if no <input_file_path>, then we will look for the .ini file inside <main_input_path>
+
 if ~exist( 'input_file_path', 'var' )
 
     files = dir(fullfile(main_input_path, '*.ini')); % search for .ini files inside <main_input_path> (warning: it can find more than 1 if exists)
@@ -126,11 +127,12 @@ if ~exist( 'input_file_path', 'var' )
 
 end
 
+%% set global variables
+
 % load input_file contaning key input parameteres
 global input_file
 input_file = ini2struct ( input_file_path ); 
 
-%%
 % save figures in .fig?
 global save_mat_fig
 save_mat_fig = 0;
@@ -158,7 +160,7 @@ PATH_source = [main_input_path  input_source];
 % function : PANAM to SQAT data conversion + conventional noise metrics  
 [source_data,...
  source_OASPL, source_OASPL_dBA,...
- source_SPECTROGRAM, source_SPECTROGRAM_dBA] = PANAM_SQAT_data_conversion( PATH_source ); 
+ source_SPECTROGRAM, source_SPECTROGRAM_dBA] = PANAM2struct( PATH_source ); 
 
 %% create results folder
 

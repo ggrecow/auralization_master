@@ -1,5 +1,5 @@
-function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM_SQAT_data_conversion(PATH)
-% function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM_SQAT_data_conversion(PATH)
+function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM2struct(PATH)
+% function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM2struct(PATH)
 %
 % READ and manage freq dependent emission/immission data per time step 
 % from PANAM 
@@ -76,7 +76,7 @@ function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM_SQAT_data_co
 %  udpated: 09.06.2023 (input data is not restricted anymore, just needs to have a valid format .dat)
 %  udpated: 11.10.2023 (buzzsaw is now treated as tonal and 1/3-OB separetly. overall_broadband noise does not include buzzsaw anymore)
 %--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-%  udpated: 19.06.204 (fundamental sources (i.e. airframe BBN, engine BBN,
+%  udpated: 19.06.2024 (fundamental sources (i.e. airframe BBN, engine BBN,
 %  engine buzssaw and engine fan tonal) are now given as raw (i.e. as from
 %  PANAM) and in TOC (from 25 Hz to 12.5 kHz). For those fundamental
 %  sources, the TOC or nothing is on the variable. All other metrics
@@ -91,16 +91,9 @@ function [data,OASPL,OASPL_dBA,SPECTROGRAM,SPECTROGRAM_dBA] = PANAM_SQAT_data_co
 % DATA   --> contains emission data (1st column = freq bands; 2nd column = emission SPL)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PATH='\\ina-drive.ina.ing.tu-bs.de\home\TU-BS\SQ metrics\matlab codes\SQA_PANAM\data\may_2020_sq_tu_braunschweig\V-2\departure\';
-% [HEADER,DATA] = mhdrload([PATH 'auralization_immission_input.dat']);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% [HEADER,DATA] = mhdrload([PATH 'SQAT_input.dat']);
+% read input data;
 [HEADER,DATA] = mhdrload(PATH);
-
-% save auralization_data HEADER DATA
-% load auralization_data;
-% return
 
 %% 2) Get data from header and store in a cell 
 % (each cell contains a structure with all data emission/immission for a time-step)
