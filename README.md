@@ -157,30 +157,7 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 ## Dependencies
 
-This software is distributed together with several third-party packages and datasets for convenience. All of these components are provided in their **original, unmodified forms** and remain under their own licenses (that is, they are **not covered by the Apache License 2.0**):
-
-- **ARTMatlab** — Apache License 2.0  
-  [Apache License](https://www.apache.org/licenses/LICENSE-2.0.txt)  
-
-- **ITA-Toolbox** — Original BSD License  
-  [Website](https://www.ita-toolbox.org/)  
-  *Requires running `<ita_toolbox_setup.m>` after installation.*  
-
-- **Faddeeva Package** — BSD 2-Clause License  
-  Steven G. Johnson (2025). *Faddeeva Package: complex error functions*.  
-  [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/38787-faddeeva-package-complex-error-functions)  
-  *Requires running `<Faddeeva_build.m>` with MinGW64 (C++).*  
-
-- **AKtools** — EUPL v1.1 License  
-  [GitHub Repository](https://github.com/f-brinkmann/AKtools)  
-
-- **FABIAN HRTF Database v4** — Creative Commons Attribution (CC-BY)  
-  Neumann, Jan & Warzybok, Anna & Ernst, Stephan & Paul, Stefan & Fastl, Hugo &  
-  Kollmeier, Birger (2019). *FABIAN head-related transfer function database v4*.  
-  [DepositOnce Repository](https://depositonce.tu-berlin.de/items/3b423df7-a764-4ce1-9065-4e6034bba759)  
-  *Attribution is required when using this dataset.*  
-
-For the full license texts and attribution details of these components, please refer to the [`LICENSES.md`](LICENSES.md) file.
+This software is distributed together with several third-party packages and datasets for convenience. All of these components are provided in their **original, unmodified forms** and remain under their own licenses (that is, they are **not necessarely covered by the Apache License 2.0**). For the full license texts and attribution details of these components, please refer to the [`LICENSES.md`](LICENSES.md) file.
 
 # Disclaimer
 
