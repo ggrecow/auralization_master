@@ -63,10 +63,10 @@ FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, t
 % define synthesis block length [samples]
 BlockLen = round(fs*dt_panam);
 
-outputSignal.outputSignal =  overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse, 'mono' );
+outputSignal.outputSignal = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse, 'mono' );
 
 if binaural_signal == 1
-    outputSignal.outputSignal_binaural =  overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
+    outputSignal.outputSignal_binaural = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
 end
 
 %%% %% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -194,7 +194,7 @@ if binaural_signal == 1
 
     % get HRIRs - direct path
     [HRIR_direct.l_a, HRIR_direct.r_a] = AKhrirInterpolation(azimuth_direct+head_orientation, elevation_direct, HATO, 'measured_sh');
-    nSamples_HRIR = size( HRIR_direct.l_a, 1);
+    nSamples_HRIR = size( HRIR_direct.l_a, 1 );
 
     % zero-pad HRIRs so they have the same size as the atmospheric transfer functions
     HRIR_direct_leftEar_padded = [HRIR_direct.l_a; zeros(numFreqBins_double_sided - nSamples_HRIR, numTimeSteps)];
@@ -202,7 +202,7 @@ if binaural_signal == 1
 
     % get TF_binaural (i.e. atmospheric effects + HRTFs)
     impulseResponse_direct_binaural_leftEar = ifft( TF_direct_double_sided .* fft( HRIR_direct_leftEar_padded ), 'symmetric' );
-    impulseResponse_direct_binaural_rightEar = ifft( TF_direct_double_sided .* fft( HRIR_direct_rightEar_padded), 'symmetric' );
+    impulseResponse_direct_binaural_rightEar = ifft( TF_direct_double_sided .* fft( HRIR_direct_rightEar_padded ), 'symmetric' );
 
     % guarantee causal impulseResponses
     impulseResponse_direct_binaural_leftEar = il_makeCausal ( impulseResponse_direct_binaural_leftEar );
@@ -322,7 +322,7 @@ end
      % sometimes it is necessary to mirror the IFFT(FRF), sometimes not. This loop
      % tries to deal with that in a very brute force way. This problem/solution needs to be further
      % investigated/improved
-     for i =1:size(input,2)
+     for i = 1:size(input,2)
 
          if input(end,i) > 1e-8 % if this arbitrary threshold is achieved in the last bin, then it means we need to mirror the IR
              output(:,i) = [input(Nsamples/2+1:end,i); input(1:Nsamples/2,i)  ];
