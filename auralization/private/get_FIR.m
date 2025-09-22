@@ -15,7 +15,9 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %  by the incidence angle directions, which were previously computed in the <get_propagation> 
 %  function, and are given as inputs here. Please refer to <AKhrirInterpolation>
 %  for the angle convention used by FABIAN (head-centered spherical
-%  coordinates). The procedure to introduce the HRTFs is conducted in frequency domain.
+%  coordinates). 
+% 
+% The procedure to introduce the HRTFs is conducted in frequency domain.
 % The HRTFs are obtained for the direct and reflected rays individually, and then multiplied to 
 % respective atmospheric transfer functions in frequency domain. The
 % resulting frequency responses are then transformed into time domain using
@@ -34,12 +36,12 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 % reflected rays. This is done in order to avoid loosing the phase (or
 % relative delays) between the impulse responses of the direct and
 % reflected rays. Alligning the relative time-shifts of FIR filters of
-% direct and reflected rays has been proven (to me) to be a hassle because
+% direct and reflected rays has been proven (by my own experience) to be a hassle because
 % the phase of the reflected ray is also influenced by freq-dependent
 % effects caused by ground reflections, and not only by propagation time
 % delay. IF those phase changes are not accounted (somehow) when generating
 % the FIR filters, then overlap and add convolution does not incorporate
-% all propagation effeects correctly. 
+% all propagation effects correctly. 
 %
 % Overall, the procedure here is the following, being Hatm the transfer functions containing the atmospheric effects: 
 %   1) input Hatm is single-sided complex-value spectrum --> get double-sided complex-valued spectrum
@@ -152,8 +154,8 @@ impulseResponse_direct = il_makeCausal (impulseResponse_direct );
 % Reflected path
 if considerGroundReflection == 1
 
-    TF_reflected =zeros( numFreqBins_single_sided, numTimeSteps ); % declare variable
-    TF_combined =zeros( numFreqBins_single_sided, numTimeSteps );
+    TF_reflected = zeros( numFreqBins_single_sided, numTimeSteps ); % declare variable
+    TF_combined = zeros( numFreqBins_single_sided, numTimeSteps );
 
     for i = 1:numTimeSteps
         TF_reflected(:,i) = transferFunction{i,1}.freq(:,2); % [nBins x nTimes]
@@ -318,7 +320,7 @@ end
     Nsamples = size(input,1); % number of samples of the impulse response
 
      % sometimes it is necessary to mirror the IFFT(FRF), sometimes not. This loop
-     % tries to deal with that in a very coarse way. This problem/solution to be further
+     % tries to deal with that in a very brute force way. This problem/solution needs to be further
      % investigated/improved
      for i =1:size(input,2)
 

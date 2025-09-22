@@ -39,9 +39,8 @@ switch type
         % fft filt using overlap and add
         for ll = 1:L
 
-            outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) = ...
-                                                                                                    outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) ...
-                                                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [IR(:,ll); zeros(BlockLen-1, 1)]);
+            outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) = outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) ...
+                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [IR(:,ll); zeros(BlockLen-1, 1)]);
 
         end
 
@@ -56,9 +55,8 @@ switch type
         % fft filt using overlap and add
         for ll = 1:L
 
-            outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) = ...
-                                                                                                    outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) ...
-                                                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [[IR.left_ear(:,ll) IR.right_ear(:,ll)]; zeros(BlockLen-1, 2)]);
+            outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) = outputSignal((ll-1)*BlockLen+1:ll*BlockLen+nTaps-1,:) ...
+                                                                    + fftfilt(inputSignal((ll-1)*BlockLen+1:ll*BlockLen,:), [[IR.left_ear(:,ll) IR.right_ear(:,ll)]; zeros(BlockLen-1, 2)]);
 
         end
 
