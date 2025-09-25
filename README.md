@@ -26,7 +26,7 @@ Predictions related to the to the _aircraft trajectory_ and associated _performa
 
 ## 1.2 Sound synthesis
 
-Sound source descriptions are transformed into sound pressure signals in time domain using different techniques from [2]. Signals containing tonal components from the **Fan tonal noise** and **Buzzsaw noise** partial sound sources are obtained using _additive synthesis_. Signals containing broadband noise from the **Airframe noise**, **Engine noise** partial sound sources are obtained using _granular synthesis_. 
+Sound source descriptions are transformed into sound pressure signals in time domain using different techniques from [2]. Signals containing tonal components from the **Fan tonal noise** and **Buzzsaw noise** partial sound sources are obtained using _additive synthesis_. Signals containing broadband noise from the **Airframe noise**, **Engine noise** partial sound sources are obtained using an _spectral resynthesis approach_ (via inverse STFT with overlap-add). 
 
 At the end of the synthesis procedure, sound signals from all partial sound sources are summed to obtain the overall aircraft noise. An overview of the sound synthesis procedures used to transform the aircraft noise predictions into sound pressure signals is presented in flowchart below.   
 
