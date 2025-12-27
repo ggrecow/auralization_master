@@ -643,79 +643,149 @@ end
 clear i j k nFreq_toc freq
  
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% organizing data per observer position 
+% % (checks how many receiver positions are available in the input file and 
+% % and organize it. Data for each receiver position is allocated in each 
+% % column of the output <data> struct, while each time step is allocated in the rows)
+% 
+% % source time approach
+% source_time = zeros(size(data,1),size(data,2)); % pre allocating for memory
+% 
+% for i = 1:size(data,1)   % time loop
+%     source_time(i) = data{i}.source_time;
+% end
+% 
+% % [idx]=find(source_time==0);       % find idx when source time is equal to zero
+% [idx] = find(source_time==source_time(1));       % find idx when source time is equal to zero
+% n_observer = size(idx,1);                        % estimating the total number of observers 
+% clear source_time;
+% 
+% if n_observer>1 % check if all observers have the same number of time-steps
+% 
+%     for i = 1:(n_observer-2)       % got the number of time-steps per observer-1
+% 
+%         nTime_a(:) = idx(i+1)-idx(i);
+%         nTime_b(:) = idx(i+2)-idx(i+1);
+% 
+%     end
+% 
+%     if nTime_a==nTime_b % this only works if all observers have the same number of time steps
+% 
+%         nTime = nTime_a;
+%         clear nTime_a nTime_b
+% 
+%         data_observer=cell(nTime,n_observer);      % declaring cell (nTimeSteps,nObserver)
+% 
+%         % starts a nasty logic to re-organized the output <data> struct according to the number of receiver positions!!!
+%         for j = 1:size(data_observer,2)              % column loop (nObservers)
+% 
+%             if j==1
+%                 a = 1;
+%                 b = nTime;
+%             else
+%                 a = (j-1)*(nTime+1);
+%                 b = j*nTime;
+%             end
+% 
+%             k = round(linspace(a,b,nTime));
+% 
+%             for i = 1:nTime      % time steps loop
+% 
+%                 aux_data = data{k(i)};
+% 
+%                 data_observer{i,j} = aux_data;
+% 
+%                 clear aux_data
+%             end
+% 
+%         end
+% 
+%         data = data_observer; % the final output is the struct data(nTime,nObserver)
+% 
+%     else
+%         disp('WARNING: Observer positions dont have the same number of time-steps !!!');
+%         return
+%     end
+% 
+%     clear a b i j k nObs nTime data_observer
+% 
+% else
+% 
+%     %   return   % if only one observer is available, outputs already computed struct data(nTime,1)
+% 
+% end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% organizing data per observer position 
-% (checks how many receiver positions are available in the input file and 
-% and organize it. Data for each receiver position is allocated in each 
-% column of the output <data> struct, while each time step is allocated in the rows)
+%% Organizing data per observer position
+%
+% Input:
+%   data{1 x nData} : flat cell array of structs
+%
+% Output:
+%   data{nTime x nObserver} : data(time, observer)
+%
+% Assumptions:
+%   - Data is ordered by observer blocks
+%   - source_time increases within each observer
+%   - source_time resets (or decreases) when moving to a new observer
+%   - All observers must have the same number of time steps
+%
+% - update version: 27.12.2025 (still need to check with other cases
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% source time approach
-source_time = zeros(size(data,1),size(data,2)); % pre allocating for memory
+% Total number of data entries
+nData = numel(data);
 
-for i = 1:size(data,1)   % time loop
+% Extract source time vector
+source_time = zeros(nData,1);
+for i = 1:nData
     source_time(i) = data{i}.source_time;
 end
 
-% [idx]=find(source_time==0);       % find idx when source time is equal to zero
-[idx] = find(source_time==source_time(1));       % find idx when source time is equal to zero
-n_observer = size(idx,1);                        % estimating the total number of observers 
-clear source_time;
+% Detect start index of each observer
+% A new observer is detected when source_time resets or decreases
+idx = [1; find(diff(source_time) <= 0) + 1];
+n_observer = numel(idx);
 
-if n_observer>1 % check if all observers have the same number of time-steps
-
-    for i = 1:(n_observer-2)       % got the number of time-steps per observer-1
-
-        nTime_a(:) = idx(i+1)-idx(i);
-        nTime_b(:) = idx(i+2)-idx(i+1);
-
-    end
-
-    if nTime_a==nTime_b % this only works if all observers have the same number of time steps
-
-        nTime = nTime_a;
-        clear nTime_a nTime_b
-
-        data_observer=cell(nTime,n_observer);      % declaring cell (nTimeSteps,nObserver)
-
-        % starts a nasty logic to re-organized the output <data> struct according to the number of receiver positions!!!
-        for j = 1:size(data_observer,2)              % column loop (nObservers)
-
-            if j==1
-                a = 1;
-                b = nTime;
-            else
-                a = (j-1)*(nTime+1);
-                b = j*nTime;
-            end
-
-            k = round(linspace(a,b,nTime));
-
-            for i = 1:nTime      % time steps loop
-
-                aux_data = data{k(i)};
-
-                data_observer{i,j} = aux_data;
-
-                clear aux_data
-            end
-
-        end
-
-        data = data_observer; % the final output is the struct data(nTime,nObserver)
-
+% Determine number of time steps per observer
+nTime = zeros(n_observer,1);
+for j = 1:n_observer
+    if j < n_observer
+        nTime(j) = idx(j+1) - idx(j);
     else
-        disp('WARNING: Observer positions dont have the same number of time-steps !!!');
-        return
+        nTime(j) = nData - idx(j) + 1;
     end
-
-    clear a b i j k nObs nTime data_observer
-
-else
-
-    %   return   % if only one observer is available, outputs already computed struct data(nTime,1)
-
 end
 
+% Enforce identical time length for all observers
+if ~all(nTime == nTime(1))
+    error(['Receivers have different number of time-steps. ', ...
+           'Cannot construct data(time,observer).']);
+end
+
+% Final dimensions
+nTime = nTime(1);
+
+% Allocate output array
+data_observer = cell(nTime, n_observer);
+
+% Reorganize flat data into (time, observer)
+for j = 1:n_observer
+    id_range = idx(j):(idx(j)+nTime-1);
+    for i = 1:nTime
+        data_observer{i,j} = data{id_range(i)};
+    end
+end
+
+% Final output
+data = data_observer;
+
+% Cleanup
+clear source_time idx nTime nData i j id_range
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% check for input data for doubled input values on time vector (only for checking and displaying, correction cant be made now in order to keep the same time vector for all receiver positions)
 
 for j = 1:size(data,2)     % observer loop
