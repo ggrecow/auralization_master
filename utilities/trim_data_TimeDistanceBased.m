@@ -129,7 +129,7 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     a = plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor, 'k' );   % flight path
     b = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor, 'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.30,0.75,0.93], 'MarkerSize', 8 ); % aircraft @ overhead
     c = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,  'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.39,0.83,0.07], 'MarkerSize', 8 );  % receiver position
-    yline(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
+    yline_local(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
 
     % legend([a, b, c], {'Point of min. distance between source/receiver',...
     %                    'Receiver position',...
@@ -241,7 +241,7 @@ else % trim is possible
     a = plot( (input_4.x)./conv_factor, (input_4.z)./conv_factor, 'k' );   % flight path
     b = plot( input_4.x(idx_min_dist)./conv_factor, input_4.z(idx_min_dist)./conv_factor, 'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.30,0.75,0.93], 'MarkerSize', 8 ); % aircraft @ overhead
     c = plot( input{1}.xobs./conv_factor, input{1}.zobs./conv_factor,  'o', 'MarkerEdgeColor', [0, 0 ,0], 'MarkerFaceColor', [0.39,0.83,0.07], 'MarkerSize', 8 );  % receiver position
-    yline(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
+    yline_local(input_4.z(idx_min_dist)./conv_factor, '--', sprintf('Overhead: %0.3g km', input_4.z(idx_min_dist)./conv_factor ), 'interpreter', 'latex', 'FontSize', 14 );
 
     % legend([a, b, c], {'Point of min. distance between source/receiver',...
     %                    'Receiver position',...

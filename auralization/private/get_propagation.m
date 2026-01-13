@@ -514,7 +514,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,1), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    a = xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -536,7 +536,7 @@ if show == 1
 % second tile - elevation angle
     ax2 = nexttile;
     plot( xx, launchAngle_direct_spherical(:,2), '-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 90]);          
     yticks([0 30 60 90]);
@@ -570,7 +570,7 @@ if show == 1
     % first tile - azimuth angle
     ax1 = nexttile;
     plot( xx, launchAngle_reflected_spherical(:,1), '-'); hold on;
-    a = xline( xx(overhead_idx), 'k--' );
+    a = xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
     yticks([0 90 180 270 360]);
@@ -593,7 +593,7 @@ if show == 1
     ax2 = nexttile;
     b = plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
     c = plot( xx, launchAngle_reflected_spherical_smooth(:,2), 'r-'); hold on;
-    xline( xx(overhead_idx), 'k--' );
+    xline_local( xx(overhead_idx), 'k--' );
 
     ylim([-90 0]);          
     yticks([-90 -60 -30 0]);

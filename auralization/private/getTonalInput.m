@@ -230,7 +230,7 @@ switch source
 
         yyaxis left;
         a = plot( rad2deg (theta_doppler) ); ylabel('$\theta$ (deg)', 'Interpreter' , 'latex'); xlabel('Time, $t$ (bins)', 'Interpreter' , 'latex'); set(gcf,'color','w');
-        yline(90);  ylim([0 180]);
+        yline_local(90);  ylim([0 180]);
 
         % plot doppler-shifted BPF
         yyaxis right; b = plot( dopplerShiftedNfreqBPF(1,:) ./ NfreqBSN(1, :) ); ylabel('Doppler-shift, $f^\prime/f_0$ (-)', 'Interpreter' , 'latex'); xlabel('Time, $t$ (bins)', 'Interpreter' , 'latex'); set(gcf,'color','w');
