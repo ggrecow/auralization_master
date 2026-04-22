@@ -143,7 +143,7 @@ Minimal working example (like a “hello world” for your framework). -->
 
 This repository hosts the auralization framework developed and verified in the following PhD thesis, where the framework is described in detail together with its verification study and an exemplary application:
 
-> G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: framework development and application. Doctoral thesis, Technische Universität Braunschweig (to be published)
+> G. Felix Greco, Sound quality analysis of virtual aircraft prototypes: framework development and application. Doctoral thesis, Technische Universität Braunschweig, 2026. DOI: [10.24355/dbbs.084-202512262308-0](https://doi.org/10.24355/dbbs.084-202512262308-0)
 
 This is the main citation if you need to cite the repository itself:
 
