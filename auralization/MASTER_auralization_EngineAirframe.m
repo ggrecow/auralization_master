@@ -204,19 +204,19 @@ save_wav( overallSignal.outputSignal, fs, AttenuationdB, fileTag, tag_auralizati
 
 % binaural signal
 
-if binaural_signal == 1
+if binaural_signal == 1 % <- binaural truncated to zero for engineSignal and airframeSignal 
 
     % save final auralized signal (stereo signals)
-    OutputAuralization.engineSignal_binaural = engineSignal.outputSignal_binaural;
-    OutputAuralization.airframeSignal_binaural = airframeSignal.outputSignal_binaural;
+    % OutputAuralization.engineSignal_binaural = engineSignal.outputSignal_binaural;
+    % OutputAuralization.airframeSignal_binaural = airframeSignal.outputSignal_binaural;
     OutputAuralization.overallSignal_binaural = overallSignal.outputSignal_binaural;
 
     % save .wav
-    fileTag = '_engineSignal_binaural';
-    save_wav( engineSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
-
-    fileTag = '_airframeSignal_binaural';
-    save_wav( airframeSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+    % fileTag = '_engineSignal_binaural';
+    % save_wav( engineSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
+    % 
+    % fileTag = '_airframeSignal_binaural';
+    % save_wav( airframeSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
 
     fileTag = '_overallSignal_binaural';
     save_wav( overallSignal.outputSignal_binaural, fs, AttenuationdB, fileTag, tag_auralization );
