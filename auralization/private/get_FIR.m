@@ -178,17 +178,22 @@ end
 
 % center IRs
 [hTOA_direct, ~, idx_d] = il_center_time_varying_ir(impulseResponse_direct);
-[impulseResponse_reflected_centered, ~, idx_r] = il_center_time_varying_ir(impulseResponse_reflected);
 
-relativeDelay = idx_r - idx_d;
+if considerGroundReflection == 1
+    [impulseResponse_reflected_centered, ~, idx_r] = il_center_time_varying_ir(impulseResponse_reflected);
 
-% apply relative delays to the IRs of reflected paths
-for k = 1:size(impulseResponse_reflected_centered,2)
+    relativeDelay = idx_r - idx_d;
 
-    hTOA_reflected(:,k) = delay_ir( ...
-        impulseResponse_reflected_centered(:,k), ...
-        relativeDelay(k));
+    % apply relative delays to the IRs of reflected paths
+    for k = 1:size(impulseResponse_reflected_centered,2)
 
+        hTOA_reflected(:,k) = delay_ir( ...
+            impulseResponse_reflected_centered(:,k), ...
+            relativeDelay(k));
+
+    end
+
+else
 end
 
 %% get HRTFs if binaural and apply them to atmospheric transfer functions (in freq domain)
