@@ -52,9 +52,19 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 global fs % sampling frequency used for auralization, defined in the <auralization_master>
 global dt_panam % dt from panam, defined in the <auralization_master>
 
+switch tag_source
+
+    case 'engineSignal'
+        binaural_signal = 0;
+
+    case 'airframeSignal'
+        binaural_signal = 0;
+end
+
 tic;
 
-%% transform atmospheric transfer function into FIR filter
+%% get transform atmospheric transfer function as FIR filters
+% and head-related impulse responses (if required)
 
 FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, tag_auralization );
 
@@ -69,7 +79,7 @@ if binaural_signal == 1
     outputSignal.outputSignal_binaural = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
 end
 
-%%% %% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % figure
 % plot(outputSignal.outputSignal );
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -98,7 +108,7 @@ if binaural_signal == 1
                 % binaural - spectrogram of applied HRTFs
                 tag_title =  ['OUTPUT - Spectrogram of  HRIRs  - ' tag_source];
                 tag_save = ['_' tag_source '_spectrogram_HRIR'];
-                PLOT_HRIR_spectrogram(FIR.HRIR_direct, FIR.HRIR_direct, dt_panam, tag_title, tag_auralization, tag_save)
+                PLOT_HRIR_spectrogram(FIR.HRIR_direct, FIR.HRIR_direct, dt_panam, tag_title, tag_auralization, tag_save);
 
                 %  spectrogram - difference between mono and stereo (binaural) signals
                 tag_title =  ['OUTPUT - Spectrogram (binaural - mono) - ' tag_source];
