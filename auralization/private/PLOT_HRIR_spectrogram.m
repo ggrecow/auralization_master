@@ -20,7 +20,7 @@ t.TileSpacing = 'compact';
 % direct - left ear
 ax1 = nexttile;
 
-data = input_direct.l_a;
+data = input_direct.leftEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
@@ -51,7 +51,7 @@ colorbar('off'); % Remove the colorbar from the figure
 % direct - right ear
 ax2 = nexttile;
 
-data = input_direct.r_a;
+data = input_direct.rightEar;
 
 % Your function for plotting
 % Your function for plotting
@@ -83,7 +83,7 @@ colorbar('off'); % Remove the colorbar from the figure
 % reflected - left ear
 ax3 = nexttile;
 
-data = input_reflected.l_a;
+data = input_reflected.leftEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
@@ -114,7 +114,7 @@ colorbar('off'); % Remove the colorbar from the figure
 % reflected - right ear
 ax4 = nexttile;
 
-data = input_reflected.r_a;
+data = input_reflected.rightEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
