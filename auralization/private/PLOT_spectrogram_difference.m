@@ -11,7 +11,18 @@ pref = 20e-6;
 
 cMap = load("cmap_divergent.mat");
 
-% compute spectrogrm of mono signal
+% -------------------------------------------------------------------------
+% Ensure mono and stereo signals have identical length
+% -------------------------------------------------------------------------
+Nmono   = size(input_mono,1);
+Nstereo = size(input_stereo,1);
+
+Nmin = min(Nmono, Nstereo);
+
+input_mono   = input_mono(1:Nmin,:);
+input_stereo = input_stereo(1:Nmin,:);
+
+% compute spectrogram of mono signal
 [P_mono,F,T] = myspecgram(input_mono, fs, windowsize , 0.75); % overlap is 75% of nfft here
 
 tiledlayout('vertical')
