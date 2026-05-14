@@ -1,3 +1,8 @@
+++ 14.05.2025 (all these changes need to be transfered to SQAT_MASTER)
+
+- changed the way the impulse responses are processed. Adopted the approach of 1) centering IRs of the direct and reflected sound paths to the same time delay; 2) applying the original delay of the reflected IR with respect to the direct IR. Now, the sum of the direct and reflected IRs is the same as the original combined HRTF from ART. 
+
+- besides, binaural files are correctly generated now. Circular convoluation criteria is fulfilled correctly (L+M-1 sample sizes before multiplication in frq domain). The fist changes also allows to adequatly apply the HRIR to each sound path adequatly, before summing them to achieve the final binaural signals
 
 ++ 31.03.2025 (all these changes need to be transfered to SQAT_MASTER)
 
@@ -12,7 +17,7 @@ inlcuded get_binaural function in MASTER_auralization_EngineAirframe
 
 - deleted imission-bsaed part from MASTER_auralization_EngineAirframe
 
-- Several changes to allow for HRTF synthesis. Main point to allot for that is the individual processing of
+- Several changes to allow for HRTF synthesis. Main point to allow for that is the individual processing of
 	the direct and reflected sound paths, which were until now performed together
 	
 CHANGES ON: get_propagation
