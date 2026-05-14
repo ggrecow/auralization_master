@@ -143,8 +143,8 @@ ylabel(""); % Remove y axis label
 cb = colorbar;
 cb.Layout.Tile = 'east';
 
-cb.Label.String = 'SPL, $L_{\mathrm{z}}$ (dB re 20 $\mu$Pa)';
 cb.Label.Interpreter = 'latex';
+cb.Label.String = 'SPL, $L_{\mathrm{z}}$ (dB re 20 $\mu$Pa)';
 cb.FontSize = fontSize;
 
 if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
