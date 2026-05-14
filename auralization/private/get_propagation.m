@@ -100,7 +100,7 @@ global save_mat_fig
 
 %% Define source and receiver position
 
-% interpolate trajectory to get more points (not clear to me if this approach is valid because we need to interpolate data in more than 1 dimension)
+% interpolate trajectory to get more points (not clear to me if this approach is valid because we would need to interpolate data in multiple dimensions? (i.e. velocity, altitude, etc...)
 % interpFactor = 5;
 % interpNum = size(input.x,1)*interpFactor;
 % xx = linspace( input.x(1), input.x(end), interpNum);
@@ -212,9 +212,10 @@ tic;
 art = AtmosphericRayTracer; % declare AtmosphericRayTracer class
 
 % define ray-tracing parameters
-art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m]
-% art.integrationTimeStep = 0.01;
-% art.maxAngleForGeomSpreading = 0.001;    %Maximimum delta angle of initial direction of neighboring rays used for the calculation of the spreading loss [°]
+art.maxReceiverRadius = 0.1; % Maximum value for receiver radius [m], default = 1
+% art.integrationTimeStep = 0.01; % default = 0.01
+% art.maxAngleForGeomSpreading = 0.001;    % Maximimum delta angle of
+% initial direction of neighboring rays used for the calculation of the spreading loss [°], default = 0.01
         
 % initialize vectors
 TF = cell (size(source,1),1);  
@@ -260,13 +261,15 @@ for i = 1:size(source,1)
     % later on considering the relative delays betweeen eigenrays)
     propagation_time(i,1) = eigenrays(i,1).t(end); % direct path
     propagation_time(i,2) = eigenrays(i,2).t(end); % reflected path
+    propagation_time(i,3) = propagation_time(i,2) - propagation_time(i,1) ; % time difference
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Calculate ground reflection
     % The ground reflection factor is required for the transfer function
     % calculation. It is 1 by default. It can either be a singe value or a
     % complex-valued vector with same length as the frequency vector.
-    % ex from template: 
+
+    % example from template: 
     % propagationModel.groundReflectionFactor = 0.9 * ones(size(propagationModel.frequencyVector)); % example from template
 
     % find idx corresponding to reflection coordinate (i.e. point where reflected ray meets the ground at z = 0)

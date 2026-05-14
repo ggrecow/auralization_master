@@ -20,12 +20,12 @@ t.TileSpacing = 'compact';
 % direct - left ear
 ax1 = nexttile;
 
-data = input_direct.l_a;
+data = input_direct.leftEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
 % Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20]);
+AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
 
 XLabelStr =  'Time, $t$ (s)';
 
@@ -51,11 +51,11 @@ colorbar('off'); % Remove the colorbar from the figure
 % direct - right ear
 ax2 = nexttile;
 
-data = input_direct.r_a;
+data = input_direct.rightEar;
 
 % Your function for plotting
 % Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20]);
+AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
 
 XLabelStr =  'Time, $t$ (s)';
 
@@ -83,12 +83,12 @@ colorbar('off'); % Remove the colorbar from the figure
 % reflected - left ear
 ax3 = nexttile;
 
-data = input_reflected.l_a;
+data = input_reflected.leftEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
 % Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20]);
+AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20],'cb', false);
 
 XLabelStr =  'Time, $t$ (s)';
 
@@ -105,21 +105,17 @@ ax3.Title.String = ' Reflected - left ear';
 ax3.Title.FontWeight = 'normal';
 ax3.Title.Interpreter = 'latex';
 
-colorbar('off'); % Remove the colorbar from the figure
-
 % xline(90, 'k--');
-
-colorbar('off'); % Remove the colorbar from the figure
 
 % reflected - right ear
 ax4 = nexttile;
 
-data = input_reflected.r_a;
+data = input_reflected.rightEar;
 
 timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
 % Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20]);
+AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
 
 XLabelStr =  'Time, $t$ (s)';
 
@@ -144,9 +140,12 @@ ylabel(""); % Remove y axis label
 % common settings
 
 % Create the colorbar and set the label
-cb = colorbar; % Colorbar for this tile
-zString = ('SPL, $L_{\mathrm{z}}$ (dB re 20 $\mu$Pa)');
-set(get(cb,'label'),'string', zString, 'fontsize', fontSize, 'Interpreter', 'latex');
+cb = colorbar;
+cb.Layout.Tile = 'east';
+
+cb.Label.Interpreter = 'latex';
+cb.Label.String = 'SPL, $L_{\mathrm{z}}$ (dB re 20 $\mu$Pa)';
+cb.FontSize = fontSize;
 
 if isempty(tag_auralization) % if tag_auralization is empty, dont save anything
 else
