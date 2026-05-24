@@ -251,7 +251,7 @@ if binaural_signal == 1
         % zero-pad HRIRs so they have L+M-1 samples
         HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
         HRIR_reflected_leftEar_padded = [HRIR_reflected.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
-        HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
+        HRIR_reflected.rightEar  = regularize_hrir( HRIR_reflected.rightEar, fs, f1_reg, f2_reg );
         HRIR_reflected_rightEar_padded = [HRIR_reflected.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
         % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
