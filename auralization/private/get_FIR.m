@@ -223,7 +223,10 @@ if binaural_signal == 1
     atm_IR_direct_padded = [hTOA_direct; zeros(nSamples_HRIR-1, numTimeSteps)];
 
     % zero-pad HRIRs so they have L+M-1 samples
+    f1_reg = 6000; f2_reg = 10000;
+    HRIR_direct.leftEar  = regularize_hrir( HRIR_direct.leftEar, fs, f1_reg, f2_reg );
     HRIR_direct_leftEar_padded = [HRIR_direct.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
+    HRIR_direct.rightEar  = regularize_hrir( HRIR_direct.rightEar, fs, f1_reg, f2_reg );
     HRIR_direct_rightEar_padded = [HRIR_direct.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
     % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
@@ -246,7 +249,9 @@ if binaural_signal == 1
         atm_IR_reflected_padded = [hTOA_reflected; zeros(nSamples_HRIR-1, numTimeSteps)];
 
         % zero-pad HRIRs so they have L+M-1 samples
+        HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
         HRIR_reflected_leftEar_padded = [HRIR_reflected.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
+        HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
         HRIR_reflected_rightEar_padded = [HRIR_reflected.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
         % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
@@ -268,7 +273,7 @@ if considerGroundReflection == 1
         % variables used for visualization only (see <PLOT_FIR> and <PLOT_FIR_spectrogram> below)
         OUT.impulseResponse_binaural.leftEar =  ( impulseResponse_direct_binaural_leftEar + impulseResponse_reflected_binaural_leftEar );
         OUT.impulseResponse_binaural.rightEar =  ( impulseResponse_direct_binaural_rightEar + impulseResponse_reflected_binaural_rightEar );
-        
+
         % HRIRs from FABIAN - used for visualizytion only
         OUT.HRIR_direct = HRIR_direct;
         OUT.HRIR_reflected= HRIR_reflected;
@@ -282,7 +287,7 @@ else % only direct path required
 
         OUT.impulseResponse_binaural.leftEar = ( impulseResponse_direct_binaural_leftEar );
         OUT.impulseResponse_binaural.rightEar = ( impulseResponse_direct_binaural_rightEar );
-        
+
         % HRIRs from FABIAN - used for visualizytion only
         OUT.HRIR_direct = HRIR_direct;
     end
@@ -509,6 +514,204 @@ end
             h_delayed = h(delaySamples+1:end);
 
             h_delayed(end+1:N) = 0;
+
+        end
+
+    end
+
+%%
+
+    function HRIR_out = regularize_hrir(HRIR_in, fs, f1, f2)
+        % REGULARIZE_HRIR
+        %
+        % Smoothly regularizes the HIGH-FREQUENCY MAGNITUDE RESPONSE of
+        % Head-Related Impulse Responses (HRIRs) while preserving:
+        %
+        %   - interaural time differences (ITD)
+        %   - phase structure
+        %   - group delay
+        %   - low-frequency interaural level differences (ILD)
+        %
+        % -------------------------------------------------------------------------
+        % MOTIVATION
+        % -------------------------------------------------------------------------
+        %
+        % Raw free-field HRTFs often contain very sharp spectral peaks and notches
+        % at high frequencies (> ~6 kHz), mainly caused by pinna resonances.
+        %
+        % For long-distance aircraft noise auralization, these detailed spectral
+        % structures may become overly prominent and can:
+        %
+        %   - amplify weak high-frequency numerical noise
+        %   - exaggerate coloration
+        %   - produce metallic or artificial timbre
+        %   - reduce perceptual realism
+        %
+        % This function progressively FLATTENS the HRTF MAGNITUDE RESPONSE above
+        % a chosen frequency range while preserving the ORIGINAL PHASE RESPONSE.
+        %
+        % As a consequence:
+        %
+        %   - binaural timing cues remain intact
+        %   - localization is largely preserved
+        %   - excessive spectral coloration is reduced
+        %
+        % -------------------------------------------------------------------------
+        % PRINCIPLE
+        % -------------------------------------------------------------------------
+        %
+        % The complex HRTF is decomposed as:
+        %
+        %       H(f) = |H(f)| exp(j*phi(f))
+        %
+        % Only the magnitude |H(f)| is modified.
+        %
+        % The phase phi(f) is preserved unchanged.
+        %
+        % The modified magnitude is:
+        %
+        %       |H_reg(f)| =
+        %
+        %           (1-alpha(f)) |H(f)| + alpha(f)
+        %
+        % where:
+        %
+        %       alpha(f) = 0      below f1
+        %       alpha(f) = 1      above f2
+        %
+        % and transitions smoothly between f1 and f2.
+        %
+        % Therefore:
+        %
+        %   below f1:
+        %       original HRTF preserved
+        %
+        %   above f2:
+        %       magnitude becomes flat (= 1)
+        %
+        % -------------------------------------------------------------------------
+        % INPUTS
+        % -------------------------------------------------------------------------
+        %
+        % HRIR_in : [Nsamples x Nblocks]
+        %
+        %       Matrix containing HRIRs.
+        %
+        %       Each column corresponds to one HRIR.
+        %
+        %       Example:
+        %
+        %           HRIR_leftEar
+        %           HRIR_rightEar
+        %
+        %
+        % fs : scalar
+        %
+        %       Sampling frequency [Hz]
+        %
+        %
+        % f1 : scalar
+        %
+        %       Start frequency of regularization [Hz]
+        %
+        %       Below f1:
+        %           HRTF remains unchanged.
+        %
+        %
+        % f2 : scalar
+        %
+        %       End frequency of regularization [Hz]
+        %
+        %       Above f2:
+        %           magnitude response becomes flat.
+        %
+        %
+        % -------------------------------------------------------------------------
+        % OUTPUT
+        % -------------------------------------------------------------------------
+        %
+        % HRIR_out : [Nsamples x Nblocks]
+        %
+        %       Regularized HRIRs.
+        %
+        % -------------------------------------------------------------------------
+
+        %% dimensions
+
+        [N, Nblocks] = size(HRIR_in);
+
+        %% allocate output
+
+        HRIR_out = zeros(size(HRIR_in));
+
+        %% frequency vector
+
+        f = (0:N-1)'/N * fs;
+
+        %% build smooth transition function alpha(f)
+
+        alpha = zeros(size(f));
+
+        % fully regularized above f2
+        alpha(f > f2) = 1;
+
+        % smooth cosine transition between f1 and f2
+        idx_transition = (f >= f1) & (f <= f2);
+
+        alpha(idx_transition) = ...
+            0.5 * ( ...
+            1 - cos( ...
+            pi * (f(idx_transition)-f1)/(f2-f1) ...
+            ));
+
+        %% process each HRIR independently
+
+        for k = 1:Nblocks
+
+            %% FFT of HRIR
+
+            H = fft(HRIR_in(:,k));
+
+            %% magnitude and phase
+
+            magnitude = abs(H);
+
+            phase = angle(H);
+
+            %% regularize ONLY magnitude
+
+            magnitude_reg = ...
+                (1 - alpha) .* magnitude + alpha;
+
+            %% reconstruct complex HRTF
+
+            H_reg = magnitude_reg .* exp(1j * phase);
+
+            %% enforce Hermitian symmetry
+            %
+            % This guarantees a real-valued HRIR after IFFT.
+            %
+            % Only required for numerical robustness.
+
+            if mod(N,2) == 0
+
+                % even length FFT
+
+                H_reg(N/2+2:end) = ...
+                    conj(flipud(H_reg(2:N/2)));
+
+            else
+
+                % odd length FFT
+
+                H_reg((N+3)/2:end) = ...
+                    conj(flipud(H_reg(2:(N+1)/2)));
+
+            end
+
+            %% back to time domain
+
+            HRIR_out(:,k) = real(ifft(H_reg));
 
         end
 
