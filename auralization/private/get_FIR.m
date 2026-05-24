@@ -182,7 +182,10 @@ end
 if considerGroundReflection == 1
     [impulseResponse_reflected_centered, ~, idx_r] = il_center_time_varying_ir(impulseResponse_reflected);
 
-    relativeDelay = idx_r - idx_d;
+    % compute delay on a wrapped circular domain
+    N = size(impulseResponse_direct,1);
+    relativeDelay = round( mod(idx_r - idx_d + floor(N/2), N) - floor(N/2) );
+    % relativeDelay = idx_r - idx_d;
 
     % apply relative delays to the IRs of reflected paths
     for k = 1:size(impulseResponse_reflected_centered,2)
