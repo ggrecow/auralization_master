@@ -223,7 +223,7 @@ if binaural_signal == 1
     atm_IR_direct_padded = [hTOA_direct; zeros(nSamples_HRIR-1, numTimeSteps)];
 
     % zero-pad HRIRs so they have L+M-1 samples
-    f1_reg = 6000; f2_reg = 10000;
+    f1_reg = 4000; f2_reg = 8000;
     HRIR_direct.leftEar  = regularize_hrir( HRIR_direct.leftEar, fs, f1_reg, f2_reg );
     HRIR_direct_leftEar_padded = [HRIR_direct.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
     HRIR_direct.rightEar  = regularize_hrir( HRIR_direct.rightEar, fs, f1_reg, f2_reg );
