@@ -7,7 +7,7 @@ This repository contains MATLAB scripts that compose a framework for aircraft no
 - sound propagation modeling using an open-source ray-tracing software; and 
 - combining **sound source descriptions** with **sound propagation effects** to obtain auralized sound pressure signals at receiver positions on the ground.
 
-The framework was developed as part of a PhD research project and is maintained by [Gil Felix Greco](https://www.linkedin.com/in/gil-felix-greco-363985101/).
+The framework was developed as part of a PhD research project and is maintained by [Gil Felix Greco](https://www.linkedin.com/in/gil-felix-greco/).
 
 # 1. Overview
 
