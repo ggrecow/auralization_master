@@ -65,8 +65,7 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %
 %       - <geschw_hoehe_verlauf.dat> input file from PANAM providing the flight profile
 %
-%       WARNING: As a convention, the folder's path provided needs to end
-%       without any separator (ex: '/' or '\') character, or the files will not be find !!!
+%       The path can be given with or without a trailing file separator.
 %
 %    tag : string (optional)
 %       provides the name of the case being analysed. All the figures and
@@ -75,10 +74,10 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %
 %    input_file_path : string (optional)
 %       contains all input parameters necessary to define the atmosphere and
-%       perform to the auralizations. If the full path pointing to the <input_file.m> is not provided, 
-%       then the code will look for the any <*.ini> file inside the
-%       <main_input_path>.  WARNING: the code is terminated if no <*.ini> file or 
-%       more than one <*.ini> file are found inside <main_input_path>
+%       perform to the auralizations. If the full path pointing to the <input_file.ini> is not provided
+%       (or is empty), the code looks for an <*.ini> file inside the <main_input_path>.
+%       WARNING: an error is thrown if no <*.ini> file or more than one <*.ini> file
+%       is found inside <main_input_path>. In this case, provide <input_file_path> explicitly.
 %
 %   results_path : string (optional)
 %   path where all the output data shall be saved. In this path, a folder called 
@@ -91,41 +90,29 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 % Institution: Technische Universität Braunschweig 
 %
 % Date created: 11.04.2024
-% Date last modified: 19.09.2025
+% Date last modified: 25.09.2026
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Deal with input args
 
+% remove trailing file separators (if any), so <main_input_path_in> can be given with or without them
+main_input_path_in = regexprep( char(main_input_path_in), '[\\/]+$', '' );
 main_input_path = [main_input_path_in filesep];
 
-if nargin < 2
+if nargin < 2 || isempty( tag )
     tag = 'auralization_results';
 end
 
-% if no <input_file_path>, then we will look for the .ini file inside <main_input_path>
-
-if ~exist( 'input_file_path', 'var' )
-
-    files = dir(fullfile(main_input_path, '*.ini')); % search for .ini files inside <main_input_path> (warning: it can find more than 1 if exists)
-    fullFilePath = fullfile(main_input_path, files.name); % take full path of the .ini file
-
-    if isempty(files) % no .ini was found inside <main_input_path>
-
-        warning( '\nNo input file with the format .ini could be found inside the <main_input_path>: %s \nPlease provide an <input_file.ini> so I can proceed with the auralizations !!!.\n ', main_input_path);
-        return
-
-    elseif size(files,1)>1 % more than one .ini was found inside <main_input_path>
-
-        warning('I found more than one .ini file inside the <main_input_path>. Please specify directly the .ini file you want to use in the third input field of the main function !!! ');
-        return
-
-    end
-
-    disp(['You forgot to provide an <input_file.ini>. The following input file will be used: ', fullFilePath]);
-    input_file_path = fullFilePath;
-
+% if no <input_file_path> is provided, look for exactly one .ini file inside <main_input_path>
+if nargin < 3 || isempty( input_file_path )
+    input_file_path = find_ini_file( main_input_path_in );
+elseif ~isfile( input_file_path )
+    error( 'auralization:iniNotFound', ...
+        'The <input_file_path> provided does not exist:\n  %s', input_file_path );
 end
+
+fprintf( 'Input file used: %s\n', input_file_path );
 
 %% set global variables
 
@@ -169,7 +156,7 @@ nReceiver = size( source_data, 2 );
 
 % By default, results are saved within <main_input_path> if a
 % <results_path> folder is not provided
-if ~exist( 'results_path', 'var' )
+if nargin < 4 || isempty( results_path )
     results_path = main_input_path;
 end
 
@@ -184,7 +171,7 @@ flight_profile_input = 'geschw_hoehe_verlauf.dat';
 flight_procedure = 2;   
 
 % function : plot/show/save flight profile
-flight_profile = get_flight_profile( [main_input_path filesep flight_profile_input],... % data path
+flight_profile = get_flight_profile( [main_input_path flight_profile_input],... % data path
                                                                                  show_flight_profile,... % plot flight profile ? 0 (no); 1(yes)
                                                                                      flight_procedure,... % proc: 0 (approach); 1 (departure); 2 (flyover) - only changes the x-axis label
                                                                             flight_profile_save_fig,... % save_figs: 0 (no); 1(yes)
@@ -246,6 +233,27 @@ for i = 1:nReceiver
      close all;
 
  end
+
+    function ini_path = find_ini_file(folder)
+        % Returns the full path of the only .ini file inside <folder>.
+        % Throws an error if no .ini file or more than one .ini file is found.
+        ini_candidates = dir( fullfile(folder, '*.ini') );
+        switch numel( ini_candidates )
+            case 0
+                error( 'auralization:noIni', ...
+                    ['No .ini file found inside <main_input_path>:\n  %s\n' ...
+                     'Please provide it as third input: auralization_master(main_input_path, tag, input_file_path)'], ...
+                    folder );
+            case 1
+                ini_path = fullfile( ini_candidates.folder, ini_candidates.name );
+                fprintf( 'No <input_file_path> provided. Using the only .ini file found inside <main_input_path>.\n' );
+            otherwise
+                error( 'auralization:ambiguousIni', ...
+                    ['More than one .ini file found inside <main_input_path>:\n  %s\n\n  %s\n\n' ...
+                     'Please specify which one to use as third input: auralization_master(main_input_path, tag, input_file_path)'], ...
+                    folder, strjoin( {ini_candidates.name}, [newline '  '] ) );
+        end
+    end % end function <find_ini_file>
 
     function Result = ini2struct(FileName)
         %==========================================================================
@@ -332,6 +340,10 @@ for i = 1:nReceiver
         Result = [];                            % we have to return something
         CurrMainField = '';                     % it will be used later
         f = fopen(FileName,'r');                % open file
+        if f < 0
+            error( 'auralization:iniNotReadable', ...
+                'Could not open the .ini file:\n  %s', FileName );
+        end
         while ~feof(f)                          % and read until it ends
             s = strtrim(fgetl(f));              % Remove any leading/trailing spaces
             if isempty(s)
