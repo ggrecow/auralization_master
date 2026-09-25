@@ -42,10 +42,7 @@ switch source
         %
         % Gil Felix Greco, Braunschweig 18.04.2024
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        % number of rotor blades
-        % nBlades = str2double( input_file.n_blades );   
-  
+ 
         % Max. n1 of the engine, in rotations per minute 
         maxRotationsPerMinute = str2double( input_file.max_rotations_per_minute );  
 
