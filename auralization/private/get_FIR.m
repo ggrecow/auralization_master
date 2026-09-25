@@ -103,6 +103,9 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 % Gil Felix Greco, Braunschweig 13.05.2026 - updated IR generation procedure to achieve CORRECT binaural auralizations
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRTF high-frequency regularization made optional
 %   (internal flag <hrtf_regularization>, disabled by default)
+% Gil Felix Greco, Braunschweig 25.09.2026 - HRIRs resampled from 44.1 kHz (FABIAN) to <fs>
+% Gil Felix Greco, Braunschweig 25.09.2026 - optional diffuse-field equalization using the FABIAN CTF
+%   (internal flag <hrtf_df_equalization>, disabled by default)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -113,6 +116,9 @@ if binaural_signal == 1
     else
         head_orientation = 0; % default value
     end
+
+    % sampling frequency of the FABIAN HRTF database
+    fs_hrir_db = 44100;
 
     % ---------------------------------------------------------------------
     % OPTIONAL HRTF high-frequency magnitude regularization (see <regularize_hrir>)
@@ -131,6 +137,53 @@ if binaural_signal == 1
 
     if hrtf_regularization == 1
         fprintf('\nHRTF regularization enabled: magnitude flattened between %g Hz and %g Hz\n', f1_reg, f2_reg);
+    end
+
+    % ---------------------------------------------------------------------
+    % OPTIONAL diffuse-field equalization of the HRTFs
+    %
+    % hrtf_df_equalization = 0 -> measured HRTFs are used  
+    % hrtf_df_equalization = 1 (DEFAULT)-> HRIRs are convolved with the inverted, 3rd-octave
+    %                             smoothed, minimum-phase common transfer function (CTF)
+    %                             provided with the FABIAN database, i.e. directional
+    %                             transfer functions (DTFs) are rendered. This is the
+    %                             same processing as AKhrirInterpolation(..., 'dir').
+    %
+    % The CTF is common to all directions and both ears, so ITD, ILD and all
+    % direction-dependent spectral cues are kept; only the direction-independent
+    % part (mainly concha resonance; blocked-ear-canal measurement) is removed. For correct reproduction,
+    % headphones equalized to a diffuse-field target are assumed.
+    %
+    % Uses <FABIAN_CTF_measured_inverted_smoothed.mat>, shipped with the framework
+    % in third_party/FABIAN_HRTF_DATABASE_v4/ (extracted from the FABIAN database
+    % with utilities/convert_FABIAN_CTF_sofa2mat.m).
+    % Not to be combined with <hrtf_regularization>.
+    % ---------------------------------------------------------------------
+    hrtf_df_equalization = 1;
+
+    if hrtf_df_equalization == 1
+
+        if hrtf_regularization == 1
+            error( 'auralization:hrtfOptionsConflict', ...
+                ['<hrtf_df_equalization> and <hrtf_regularization> cannot be used together ' ...
+                '(the CTF was derived from the unregularized HRTFs). Set one of them to 0 in get_FIR.m.'] );
+        end
+
+        ctf_file = 'FABIAN_CTF_measured_inverted_smoothed.mat';
+        if ~exist( ctf_file, 'file' )
+            error( 'auralization:ctfNotFound', ...
+                ['Diffuse-field equalization requires <%s>, which is shipped in ' ...
+                'third_party/FABIAN_HRTF_DATABASE_v4/. Make sure this folder is on the MATLAB path.'], ctf_file );
+        end
+
+        CTF = load( ctf_file, 'ctf', 'fs' );
+
+        if CTF.fs ~= fs_hrir_db
+            error( 'auralization:ctfSamplingFrequency', ...
+                'CTF sampling frequency (%g Hz) differs from the HRTF database (%g Hz).', CTF.fs, fs_hrir_db );
+        end
+
+        fprintf('\nHRTF diffuse-field equalization enabled (FABIAN inverted CTF)\n');
     end
 end
 
@@ -229,6 +282,8 @@ if binaural_signal == 1
     % (only one angle is of interest, but more are available in the FABIAN database)
     HATO = 0;
 
+    fs_hrir = fs_hrir_db;
+
     % direct path
     % incidence angles (spherical coordinates) of the incoming sound wave
     azimuth_direct = input.spherical_angles_HRTF.direct_path(:,1);
@@ -236,6 +291,17 @@ if binaural_signal == 1
 
     % get HRIRs
     [HRIR_direct.leftEar, HRIR_direct.rightEar] = AKhrirInterpolation(azimuth_direct+head_orientation, elevation_direct, HATO, 'measured_sh');
+
+    % optional diffuse-field equalization (at the database sampling frequency,
+    % i.e. before resampling; same operation as AKhrirInterpolation(..., 'dir'))
+    if hrtf_df_equalization == 1
+        HRIR_direct.leftEar  = fftfilt( CTF.ctf, HRIR_direct.leftEar );
+        HRIR_direct.rightEar = fftfilt( CTF.ctf, HRIR_direct.rightEar );
+    end
+
+    % resample HRIRs from the FABIAN sampling frequency (44.1 kHz) to <fs>
+    HRIR_direct.leftEar  = il_resample_hrir( HRIR_direct.leftEar,  fs, fs_hrir );
+    HRIR_direct.rightEar = il_resample_hrir( HRIR_direct.rightEar, fs, fs_hrir );
     nSamples_HRIR = size( HRIR_direct.leftEar, 1 );
 
     % we need to create a zero-padded atmospheric impulse response with size
@@ -266,6 +332,17 @@ if binaural_signal == 1
 
         % get HRIRs for reflected path
         [HRIR_reflected.leftEar, HRIR_reflected.rightEar] = AKhrirInterpolation(azimuth_reflected+head_orientation, elevation_reflected, HATO, 'measured_sh');
+
+        % optional diffuse-field equalization (at the database sampling frequency,
+        % i.e. before resampling; same operation as AKhrirInterpolation(..., 'dir'))
+        if hrtf_df_equalization == 1
+            HRIR_reflected.leftEar  = fftfilt( CTF.ctf, HRIR_reflected.leftEar );
+            HRIR_reflected.rightEar = fftfilt( CTF.ctf, HRIR_reflected.rightEar );
+        end
+
+        % resample HRIRs from the FABIAN sampling frequency (44.1 kHz) to <fs>
+        HRIR_reflected.leftEar  = il_resample_hrir( HRIR_reflected.leftEar,  fs, fs_hrir );
+        HRIR_reflected.rightEar = il_resample_hrir( HRIR_reflected.rightEar, fs, fs_hrir );
 
         % we need to create a zero-padded atmospheric impulse response with size
         % L+M-1 to perform circular convolution with head-related impulse
@@ -364,6 +441,21 @@ else
     end
 
 end
+
+%% inline function : il_resample_hrir(HRIR, fs, fs_hrir)
+
+    function HRIR_out = il_resample_hrir(HRIR_in, fs, fs_hrir)
+        % resample HRIRs [Nsamples x Nblocks] from <fs_hrir> to <fs>.
+        % The FABIAN database is sampled at 44.1 kHz; without resampling, the
+        % HRIRs would be played back at the framework sampling frequency,
+        % shifting all spectral features by fs/fs_hrir and scaling all ITDs
+        % by fs_hrir/fs.
+        if fs == fs_hrir
+            HRIR_out = HRIR_in;
+        else
+            HRIR_out = resample( HRIR_in, fs, fs_hrir ); % operates along columns
+        end
+    end % end of function <il_resample_hrir>
 
 %% inline function : il_center_time_varying_ir(IR)
 

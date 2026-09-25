@@ -4,4 +4,4 @@
 *.png
 input_data/results_auralization/*
 *.mat
-
+!third_party/FABIAN_HRTF_DATABASE_v4/*.mat
