@@ -120,6 +120,13 @@ fprintf( 'Input file used: %s\n', input_file_path );
 global input_file
 input_file = ini2struct ( input_file_path ); 
 
+% resolve relative paths given inside the .ini relative to the folder of the .ini
+% (so they work regardless of MATLAB's current folder, also in the compiled .exe)
+if isfield( input_file, 'sounding_filepath' ) && ~isempty( input_file.sounding_filepath )
+    input_file.sounding_filepath = resolve_ini_path( input_file.sounding_filepath, fileparts(input_file_path) );
+    fprintf( 'Atmospheric sounding file: %s\n', input_file.sounding_filepath );
+end
+
 % save figures in .fig?
 global save_mat_fig
 save_mat_fig = 0;
@@ -254,6 +261,16 @@ for i = 1:nReceiver
                     folder, strjoin( {ini_candidates.name}, [newline '  '] ) );
         end
     end % end function <find_ini_file>
+
+    function p = resolve_ini_path(p, ini_folder)
+        % Converts a path given inside the .ini into a full path.
+        % Absolute paths are kept; relative paths are resolved relative to the .ini folder.
+        p = strtrim( erase(p, {'"', ''''}) );                             % remove quotes, if any
+        is_absolute = ~isempty( regexp(p, '^([a-zA-Z]:[\\/]|[\\/])', 'once') );
+        if ~is_absolute
+            p = fullfile( ini_folder, p );
+        end
+    end % end function <resolve_ini_path>
 
     function Result = ini2struct(FileName)
         %==========================================================================

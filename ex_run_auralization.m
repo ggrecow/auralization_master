@@ -79,10 +79,10 @@ clear; close all; clc;
 %% select example case
 
 % 'homogeneous' - homogeneous atmosphere
-atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
+% atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
 
 % 'sounding'    - atmosphere imported from atmospheric soundings
-% atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
+atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
 
 atmosphere = validatestring(atmosphere, {'homogeneous', 'sounding'});
 
