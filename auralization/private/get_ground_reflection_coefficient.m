@@ -35,7 +35,7 @@ function Q = get_ground_reflection_coefficient( freq, sigma_e, theta, r2, soundS
 %   frequency vector
 %
 %   sigma_e : scalar
-%   effective flow resistance [kPa/m^2.s]
+%   effective flow resistance [Pa/m^2.s]
 %
 %   theta : scalar
 %   angle between the ground plane and the ground reflected path [rad]
@@ -111,7 +111,7 @@ Q = Rp + ( 1 - Rp ).*F;
         %   frequency vector
         %
         %   sigma_e : scalar
-        %   effective flow resistance [kPa/m^2.s]
+        %   effective flow resistance [Pa/m^2.s]
         %
         %   model : string
         %   apply semi empirical coefficients, according to 

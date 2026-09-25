@@ -159,6 +159,18 @@ nfft = 2^14; % to yield df=3 Hz (if fs=48 kHz). needs to be fine, otherwise grou
 % get propagation freq response using ray-tracing (ART)
 emission_angle_panam = get_emission_angle(input); % get emission angle from PANAM, to compare with emission angles of the ART
 receiver = [ (input{1}.xobs) (input{1}.yobs) (input{1}.zobs) ]; % receiver position
+
+% A flush-mounted (ground-plane) receiver and a head-and-torso simulator are mutually
+% exclusive: at zobs = 0 there is no head, and the HRTFs would be meaningless.
+% The mono signal is the physically correct output in this case, and it already
+% contains the +6 dB from p_tot = p_dir*(1+Q). See issue #4.
+if receiver(3) == 0 && binaural_signal == 1
+    warning(['Flush-mounted receiver (zobs = 0 m): binaural rendering disabled. ' ...
+             'Only the mono (ground-plane) signal is generated. ' ...
+             'Use zobs = 1.2-1.5 m for a HATS receiver.']);
+    binaural_signal = 0;
+end
+
 OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
 
 % apply propagation

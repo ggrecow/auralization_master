@@ -61,6 +61,10 @@ switch tag_source
         binaural_signal = 0;
 end
 
+if isfield(inputRayTracing, 'flushMountedReceiver') && inputRayTracing.flushMountedReceiver
+    binaural_signal = 0;
+end
+
 tic;
 
 %% get transform atmospheric transfer function as FIR filters
