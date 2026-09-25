@@ -100,7 +100,9 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %       OUT.HRIR_reflected= HRIR_reflected;
 %
 % Gil Felix Greco, Braunschweig 09.04.2025
-% Gil Felix Greco, Braunschweig 13.05.2025 - updated IR generation procedure to achieve CORRECT binaural auralizations
+% Gil Felix Greco, Braunschweig 13.05.2026 - updated IR generation procedure to achieve CORRECT binaural auralizations
+% Gil Felix Greco, Braunschweig 25.09.2026 - HRTF high-frequency regularization made optional
+%   (internal flag <hrtf_regularization>, disabled by default)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -110,6 +112,25 @@ if binaural_signal == 1
         head_orientation = str2double ( input_file.head_orientation );  % get <head_orientation> from <input_file>
     else
         head_orientation = 0; % default value
+    end
+
+    % ---------------------------------------------------------------------
+    % OPTIONAL HRTF high-frequency magnitude regularization (see <regularize_hrir>)
+    %
+    % hrtf_regularization = 0 -> measured HRTFs are used unmodified (DEFAULT)
+    % hrtf_regularization = 1 -> HRTF magnitude is flattened (to unity) between
+    %                            f1_reg and f2_reg [Hz], phase (ITD) is kept
+    %
+    % NOTE: this is a perceptual option, not part of the physical rendering.
+    % It removes high-frequency spectral cues (pinna notches, high-frequency
+    % ILD) relevant for the perception of elevation and front/back direction.
+    % ---------------------------------------------------------------------
+    hrtf_regularization = 0;
+    f1_reg = 4000; % Hz, start of regularization band
+    f2_reg = 8000; % Hz, end of regularization band
+
+    if hrtf_regularization == 1
+        fprintf('\nHRTF regularization enabled: magnitude flattened between %g Hz and %g Hz\n', f1_reg, f2_reg);
     end
 end
 
@@ -222,11 +243,14 @@ if binaural_signal == 1
     % resposes
     atm_IR_direct_padded = [hTOA_direct; zeros(nSamples_HRIR-1, numTimeSteps)];
 
+    % optional high-frequency regularization of the HRIRs
+    if hrtf_regularization == 1
+        HRIR_direct.leftEar  = regularize_hrir( HRIR_direct.leftEar, fs, f1_reg, f2_reg );
+        HRIR_direct.rightEar = regularize_hrir( HRIR_direct.rightEar, fs, f1_reg, f2_reg );
+    end
+
     % zero-pad HRIRs so they have L+M-1 samples
-    f1_reg = 4000; f2_reg = 8000;
-    HRIR_direct.leftEar  = regularize_hrir( HRIR_direct.leftEar, fs, f1_reg, f2_reg );
     HRIR_direct_leftEar_padded = [HRIR_direct.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
-    HRIR_direct.rightEar  = regularize_hrir( HRIR_direct.rightEar, fs, f1_reg, f2_reg );
     HRIR_direct_rightEar_padded = [HRIR_direct.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
     % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
@@ -248,10 +272,14 @@ if binaural_signal == 1
         % resposes
         atm_IR_reflected_padded = [hTOA_reflected; zeros(nSamples_HRIR-1, numTimeSteps)];
 
+        % optional high-frequency regularization of the HRIRs
+        if hrtf_regularization == 1
+            HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
+            HRIR_reflected.rightEar = regularize_hrir( HRIR_reflected.rightEar, fs, f1_reg, f2_reg );
+        end
+
         % zero-pad HRIRs so they have L+M-1 samples
-        HRIR_reflected.leftEar  = regularize_hrir( HRIR_reflected.leftEar, fs, f1_reg, f2_reg );
         HRIR_reflected_leftEar_padded = [HRIR_reflected.leftEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
-        HRIR_reflected.rightEar  = regularize_hrir( HRIR_reflected.rightEar, fs, f1_reg, f2_reg );
         HRIR_reflected_rightEar_padded = [HRIR_reflected.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
         % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
