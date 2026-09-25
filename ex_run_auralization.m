@@ -16,9 +16,9 @@
 %     auralization_input.dat           <- shared by all examples
 %     geschw_hoehe_verlauf.dat         <- shared by all examples
 %     example_homogeneous_atmosphere/
-%       config.ini
+%       input_file_auralization.ini
 %     example_sounding_atmosphere/
-%       config.ini
+%       input_file_auralization_import_atmosphere.ini
 %       atmosphere_soundings/
 %
 %   auralization_input.dat - sound emissions per time step, per sound
@@ -27,17 +27,17 @@
 %   geschw_hoehe_verlauf.dat - flight trajectory and associated operational
 %   conditions. File needs to have this name.
 %
-%   example_homogeneous_atmosphere/config.ini - initializing file containing
-%   inputs related to signal processing and setup of the atmospheric
-%   conditions used for the sound propagation simulation. Here, a
-%   homogeneous atmosphere is assumed.
+%   example_homogeneous_atmosphere/input_file_auralization.ini -
+%   initializing file containing inputs related to signal processing and
+%   setup of the atmospheric conditions used for the sound propagation
+%   simulation. Here, a homogeneous atmosphere is assumed.
 %
-%   example_sounding_atmosphere/config.ini - same as above, but the
-%   atmosphere is imported from atmospheric soundings (.txt files stored in
-%   the 'atmosphere_soundings' subfolder), as provided by
-%   http://weather.uwyo.edu/upperair/sounding_legacy.html. The sounding 
-%   (i.e. real measurement of atmosphere parameters over height, or an 
-%   measured inhomogenoues atmosphere) to be used for sound propagation
+%   example_sounding_atmosphere/input_file_auralization_import_atmosphere.ini -
+%   same as above, but the atmosphere is imported from atmospheric soundings
+%   (.txt files stored in the 'atmosphere_soundings' subfolder), as provided by
+%   http://weather.uwyo.edu/upperair/sounding_legacy.html. The sounding
+%   (i.e. real measurement of atmosphere parameters over height, or a
+%   measured inhomogeneous atmosphere) to be used for sound propagation
 %   simulation is defined inside the .ini file.
 %
 % POSSIBLE CALLS:
@@ -60,6 +60,10 @@
 %   no .ini file, so <input_file> must be provided. The shorter calls are
 %   meant for case folders holding both the .dat files and a single .ini.
 %
+%   NOTE: all paths are built from the location of this script, so it can
+%   be run regardless of MATLAB's current folder. Run the whole script
+%   (F5 / Run), not single sections, otherwise the script location is unknown.
+%
 % Assumption: all required inputs are available
 %
 % -------------------------------
@@ -75,17 +79,20 @@ clear; close all; clc;
 %% select example case
 
 % 'homogeneous' - homogeneous atmosphere
-atmosphere = 'homogeneous'; % <-- uncomment here for homogenous atmosphere
+atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
 
 % 'sounding'    - atmosphere imported from atmospheric soundings
-% atmosphere = 'sounding'; % <-- uncomment here for inhomogenous atmosphere
+% atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
 
 atmosphere = validatestring(atmosphere, {'homogeneous', 'sounding'});
 
 %% setup
 
+% folder of this script (paths are built from here, independent of MATLAB's current folder)
+script_folder = fileparts(mfilename('fullpath'));
+
 % input data folder (contains the .dat files)
-core_path = fullfile(pwd, 'input_data');
+core_path = fullfile(script_folder, 'input_data');
 
 % initializing file of the selected example case
 switch atmosphere
@@ -102,7 +109,7 @@ input_file = fullfile(core_path, ['example_' atmosphere '_atmosphere'], ini_name
 tag = ['VR_approach_' atmosphere '_atmosphere'];
 
 % results folder
-results_path = fullfile(pwd, ['output_data_test_' atmosphere '_atmosphere\'] );
+results_path = [fullfile(script_folder, ['output_data_test_' atmosphere '_atmosphere']) filesep];
 
 %% run auralization (see POSSIBLE CALLS in the header for other options)
 
