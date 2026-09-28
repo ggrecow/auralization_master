@@ -9,64 +9,56 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   reflected_path : geometrical spreading, atmospheric absorption, phase
 %   shift due to propagation time, ground reflection
 %
-%  If binaural files are to be generated, then measured HRTFs
-%  from FABIAN database (DOI: 10.14279/depositonce-5718.5)
-%  are used (zero-degree HATO only). The aircraft trajectory is already indirectly accounted for
-%  by the incidence angle directions, which were previously computed in the <get_propagation>
-%  function, and are given as inputs here. Please refer to <AKhrirInterpolation>
-%  for the angle convention used by FABIAN (head-centered spherical
-%  coordinates).
+% Overall, the procedure is the following (for each time block):
+%   1) the single-sided complex-valued Hatm of the direct (and reflected) path is
+%      converted to a double-sided spectrum and transformed to time domain (IFFT)
+%   2) the direct IR is centered (peak moved to the middle of the IR). This avoids
+%      problems related to the periodicity of the Fourier transform, which leads to a
+%      circular-shift (wrap-around) effect for IRs with long time delays, and with the
+%      overlap-add convolution later on
+%   3) if the ground reflection is considered, the reflected IR is centered as well, and
+%      the relative time-of-arrival difference between direct and reflected eigenrays
+%      (computed on a wrapped circular domain) is applied to the reflected IR only, as a
+%      non-circular delay
+%   4) OUT.impulseResponse = centered direct IR (+ delayed reflected IR)
 %
-% The procedure to introduce the HRTFs is conducted in frequency domain.
-% For that, impulse responses of direct and reflected rays are first alligned
-% to the same time delay (centered), and then the relative
-% time-of-arrival differences between direct and reflected eigenrays are applied
-% to the reflected IRs. This avoids problems related with the periodicity of the
-% fourier transform, which leads to a circshift effect for IRs with long time delays,
-% and with the overlap and add convolution later on. After that, the impulse
-% responses are transformed into freq domain, zero-padded padded as required to perform circular
-% convolution, and multiplied to the HRTFs. The resulting
-% frequency responses are then transformed into time domain using
-% IFFT, resulting in binaural impulse responses for the direct and reflected sound paths individually.
+% If binaural signals are to be generated, measured HRTFs from the FABIAN database
+% (DOI: 10.14279/depositonce-5718.5) are used (zero-degree HATO only). The aircraft
+% trajectory is indirectly accounted for by the incidence angles of the direct and
+% reflected eigenrays, previously computed in <get_propagation> and given as inputs here.
+% Please refer to <AKhrirInterpolation> for the angle convention used by FABIAN
+% (head-centered spherical coordinates). For each path:
+%   1.b) HRIRs are interpolated for the incidence angles (spherical-harmonics
+%        representation of the measured HRIRs, 44.1 kHz)
+%   2.b) optional diffuse-field equalization (<hrtf_df_equalization> in the .ini file,
+%        enabled by default): HRIRs are filtered with the inverted common transfer
+%        function (CTF) of the FABIAN database, at 44.1 kHz
+%   3.b) HRIRs are resampled from 44.1 kHz to <fs>
+%   4.b) optional high-frequency regularization of the HRIRs (internal flag
+%        <hrtf_regularization>, disabled by default; not combinable with 2.b)
+%   5.b) atmospheric IRs (from step 2/3) and HRIRs are zero-padded to L+M-1 samples, so
+%        that their product in frequency domain corresponds to a linear convolution,
+%        and transformed back to time domain
+%   6.b) OUT.impulseResponse_binaural = direct binaural IR (+ reflected binaural IR),
+%        for the left and right ears
 %
 % Head orientation is defined by changing the azimuth angles, by the
-% <head_orientation> variable read in the input file.  By default, the
-% front of the head always points towards the source,
-% i.e. positive x-axis -> head_orientation = 0 (degrees), and then angles increase counterclockwise
-%  . For ex.,
-%   head_orientation = 90 -> source from right ear -> left ear
-%   head_orientation = 180 -> source from back  -> to front
+% <head_orientation> variable read in the input file. By default, the front of the
+% head points to the positive x-axis (head_orientation = 0 degrees), and angles
+% increase counterclockwise. For ex.,
+%   head_orientation = 0   -> source from front -> back (DEFAULT)
+%   head_orientation = 90  -> source from right ear -> left ear
+%   head_orientation = 180 -> source from back -> front
 %   head_orientation = 270 -> source from left ear -> right ear
-%
-% Overall, the procedure here is the following, being Hatm the transfer functions containing the atmospheric effects:
-%   1) input Hatm is single-sided complex-value spectrum --> get double-sided complex-valued spectrum
-%   2) transform double-sided spectrum signal to time domain
-%   3) shift impulse response to make it causal (in case of zero-phase FIRs)
-%   4) truncate FIR to nTaps. These are FIR filters containing effects
-%   described by Hatm
-%   5) if both rays are to be considered, then FIR = impulseResponse_direct
-%   + impulseResponse_reflected, otherwise FIR = impulseResponse_direct
-%
-%   If binaural
-%   1.b) azimuth and elevation angles are used to get the HRTFs
-%   2.b) HRTFs are provided as impulse responses (HRIRs). These are
-%   zero-padded to have the same size of the double-sided complex-valued spectrum
-%   3.b) zero padded HRIRs are transformed into frequency domain and
-%   multiplied with the Hatm in frequency domain
-%   4.b) results from step 3.b are transformed into time domain to get
-%   impulseResponse_binaural containing both Hatm and HRTFs effects
-%   5.b) if both rays are to be considered, then FIR_binaural = impulseResponse_binaural_direct
-%   + impulseResponse_binaural_reflected, otherwise FIR_binaural =
-%   impulseResponse_direct_binaural
 %
 %   INPUTS
 %
-%   inputRayTracing : struct
+%   input : struct
 %   contains the OUT data from ray tracing simulations.
 %   type <help get_propagation> for more details
 %
 %   fs : scalar
-%   sampling frquency, in hertz
+%   sampling frequency, in hertz
 %
 %   considerGroundReflection : boolean
 %   contain info about whether to consider ground reflection or not
@@ -78,35 +70,33 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   tag_auralization : string
 %           name to save the plots
 %
-%   caseTag : string
-%           flag to sinalize if we are dealing with 'direct' or 'reflected', so that we can save
-%           plots with correct name
+%   OUTPUTS
 %
-%   output
 %   OUT : struct
 %       contain following fields
 %
-%      OUT.impulseResponse : FIR filter truncated to nTaps
-%       if  considerGroundReflection=0, OUT.impulseResponse = impulseResponse_direct
-%       if  considerGroundReflection=1, OUT.impulseResponse = impulseResponse_direct + impulseResponse_reflected
+%      OUT.impulseResponse : time-varying FIR filters [nSamples x nBlocks]
+%       if  considerGroundReflection=0, OUT.impulseResponse = centered direct IR
+%       if  considerGroundReflection=1, OUT.impulseResponse = centered direct IR + delayed reflected IR
 %
-%       OUT.impulseResponse_binaural :  FIR filter truncated to nTaps, for
-%       the left and right ears. These FIR contains both the efffects of Hatm and HRTFs together
-%       if  considerGroundReflection=0, OUT.impulseResponse_binaural = impulseResponse_direct_binaural
-%       if  considerGroundReflection=1, OUT.impulseResponse_binaural = impulseResponse_direct_binaural + impulseResponse_reflected_binaural
+%      OUT.impulseResponse_binaural : time-varying FIR filters for the left and right
+%       ears (.leftEar, .rightEar), containing both the effects of Hatm and HRTFs
+%       if  considerGroundReflection=0, direct binaural IR
+%       if  considerGroundReflection=1, direct binaural IR + reflected binaural IR
 %
-%       The used HRIRs are provided so that we can plot (or analyse them) them if we need
-%       OUT.HRIR_direct = HRIR_direct;
-%       OUT.HRIR_reflected= HRIR_reflected;
+%      If binaural, the used HRIRs (after the processing steps 1.b-4.b) are also
+%      provided, so that they can be plotted or analysed:
+%       OUT.HRIR_direct, OUT.HRIR_reflected
 %
 % Gil Felix Greco, Braunschweig 09.04.2025
 % Gil Felix Greco, Braunschweig 13.05.2026 - updated IR generation procedure to achieve CORRECT binaural auralizations
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRTF high-frequency regularization made optional
 %   (internal flag <hrtf_regularization>, disabled by default)
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRIRs resampled from 44.1 kHz (FABIAN) to <fs>
-% Gil Felix Greco, Braunschweig 25.09.2026 - optional diffuse-field equalization using the FABIAN CTF
-%   (internal flag <hrtf_df_equalization>, disabled by default)
+% Gil Felix Greco, Braunschweig 28.09.2026 - diffuse-field equalization using the FABIAN CTF
+%   (<hrtf_df_equalization> in the .ini file, enabled by default)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 global input_file
 
@@ -139,34 +129,38 @@ if binaural_signal == 1
         fprintf('\nHRTF regularization enabled: magnitude flattened between %g Hz and %g Hz\n', f1_reg, f2_reg);
     end
 
-    % ---------------------------------------------------------------------
-    % OPTIONAL diffuse-field equalization of the HRTFs
+    % diffuse-field (DF) equalization of the HRTFs, defined in the .ini file
+    % (see <hrtf_df_equalization> in the .ini for a description)
     %
-    % hrtf_df_equalization = 0 -> measured HRTFs are used  
-    % hrtf_df_equalization = 1 (DEFAULT)-> HRIRs are convolved with the inverted, 3rd-octave
+    % hrtf_df_equalization = 1 -> HRIRs are convolved with the inverted, 3rd-octave
     %                             smoothed, minimum-phase common transfer function (CTF)
-    %                             provided with the FABIAN database, i.e. directional
-    %                             transfer functions (DTFs) are rendered. This is the
-    %                             same processing as AKhrirInterpolation(..., 'dir').
-    %
-    % The CTF is common to all directions and both ears, so ITD, ILD and all
-    % direction-dependent spectral cues are kept; only the direction-independent
-    % part (mainly concha resonance; blocked-ear-canal measurement) is removed. For correct reproduction,
-    % headphones equalized to a diffuse-field target are assumed.
+    %                             of the FABIAN database (DEFAULT). Same processing as
+    %                             AKhrirInterpolation(..., 'dir').
+    % hrtf_df_equalization = 0 -> measured (blocked ear-canal) HRTFs are used
     %
     % Uses <FABIAN_CTF_measured_inverted_smoothed.mat>, shipped with the framework
     % in third_party/FABIAN_HRTF_DATABASE_v4/ (extracted from the FABIAN database
     % with utilities/convert_FABIAN_CTF_sofa2mat.m).
     % Not to be combined with <hrtf_regularization>.
-    % ---------------------------------------------------------------------
-    hrtf_df_equalization = 1;
+    if isfield( input_file, 'hrtf_df_equalization' )
+        hrtf_df_equalization = str2double( input_file.hrtf_df_equalization );
+    else
+        hrtf_df_equalization = 0; % default value
+    end
+
+    if ~( hrtf_df_equalization == 0 || hrtf_df_equalization == 1 )
+        error( 'auralization:invalidDfEqualization', ...
+            '<hrtf_df_equalization> in the .ini file must be 0 or 1 (got %s).', ...
+            num2str( hrtf_df_equalization ) );
+    end
 
     if hrtf_df_equalization == 1
 
         if hrtf_regularization == 1
             error( 'auralization:hrtfOptionsConflict', ...
                 ['<hrtf_df_equalization> and <hrtf_regularization> cannot be used together ' ...
-                '(the CTF was derived from the unregularized HRTFs). Set one of them to 0 in get_FIR.m.'] );
+                '(the CTF was derived from the unregularized HRTFs). Set <hrtf_regularization> ' ...
+                'to 0 in get_FIR.m or <hrtf_df_equalization> to 0 in the .ini file.'] );
         end
 
         ctf_file = 'FABIAN_CTF_measured_inverted_smoothed.mat';
@@ -184,6 +178,8 @@ if binaural_signal == 1
         end
 
         fprintf('\nHRTF diffuse-field equalization enabled (FABIAN inverted CTF)\n');
+    else
+        fprintf('\nHRTF diffuse-field equalization disabled: measured (blocked ear-canal) HRTFs are used\n');
     end
 end
 
