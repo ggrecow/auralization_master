@@ -35,7 +35,12 @@ function [w, Ccoh] = get_coherence_factor_homogeneous(hs, hr, r, atm, f)
 %   turbulence. For elevated sources it applies near-ground turbulence along
 %   the whole path and overestimates the decorrelation.
 %
-% Author: Gil Felix Greco, Braunschweig
+% Author: Gil Felix Greco, Braunschweig (27.10.2026)
+%
+%   AI disclosure: Generative AI assistance (Anthropic Claude) was used to 
+%   develop this code under the author's direction. All codes were verified 
+%   by the author.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 narginchk(4, 5);
 if nargin < 5, f = []; end
