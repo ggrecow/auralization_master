@@ -1,4 +1,3 @@
-
 # Framework for aircraft noise auralization 
 
 This repository contains MATLAB scripts that compose a framework for aircraft noise auralization. The framework deals with:
@@ -46,6 +45,12 @@ Finally, atmospheric transfer functions are established by combining the aforeme
 
 <img src="utilities/images/propagatoin_effects_atm_transfer_function.svg" alt="sound propagation overview" width="1200">
 
+### Turbulence-induced coherence loss (optional)
+
+The transfer functions above assume a fully coherent sum of the direct and reflected sound. In a real atmosphere, turbulence partially decorrelates the two paths, which smears out the interference dips of the ground effect, particularly at high frequencies and long distances. Without this effect, auralized flyovers tend to sound unnaturally "phasy" as the dips sweep through the spectrum.
+
+Following Pieren & Lincke [9], this can optionally be included by filtering the reflected path with random-phase decorrelation filters, redrawn every 0.1 s, whose average reproduces the coherence factor $C_{\mathrm{coh}}(f) = \exp(-w f^2)$ between the two paths. The parameter $w$ is computed for each source-receiver geometry from the turbulence of the atmospheric boundary layer, described by three quantities available, e.g., from ERA5 reanalysis data: friction velocity, surface heat flux and boundary-layer height. Two models are provided: the slanted-propagation model of Ostashev et al. [10], suited to elevated sources such as aircraft (default), and the homogeneous model used in [9], valid for near-horizontal propagation. Both are restricted to neutral and daytime (unstable) conditions.
+
 ## 1.4 Receiver model
 
 The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database [7]. 
@@ -53,11 +58,18 @@ The simpliest case is that of an omnidirectional microphone (with 0 dB gain for 
 Only measured HRTFs with zero-degree **Head-above Torso Orientation (HATO)** are considered in this work, meaning the head is aligned with the torso without any additional rotation in yaw, pitch or roll (i.e., looking
 straight ahead and not tilted up, down, or to the side, with ears at the same height). By default, the output audio after binaural rendering is **stereo (one channel per ear)**, representing **binaural-dichotic signals** with the receiver assumed to be facing the sound source. The position of the head can be rotated in the horizontal plane if desired.  
 
+**Headphone reproduction.** The FABIAN HRTFs are measured at the blocked ear-canal entrance, so the headphone transfer function must be compensated for correct playback. Two consistent options are supported:
+
+- **Diffuse-field equalized HRTFs** (`hrtf_df_equalization = 1`): the HRTFs are divided by the common transfer function of the database, i.e. their diffuse-field average. Played back over headphones designed to a diffuse-field target, no further filtering is needed. This generic compensation is well suited for demonstrations and informal listening.
+- **Raw HRTFs** (`hrtf_df_equalization = 0`, default) combined with a headphone filter measured on a dummy head or on the listeners. This is recommended for listening experiments. The FABIAN database provides such filters for about 35 headphone models.
+
+The two options should not be combined, since the headphone response would then be compensated twice.
+
 ## 1.5 Combining source descriptions with sound propagation effects 
 
 To allow for comparison between different cases, first the input aircraft trajectory is trimmed to a desired auralization time around the point on which the aircraft slanted distance from the observer is minimum. Note that, depending on the aircraft trajectory, this is point is not the same as the aircraft overhead position. Thereby, the synthesized signal of the aircraft noise emissions (including Doppler effect) is combined with the transfer functions of the direct and reflected sound paths for each source and receiver pairs considered within the discrete aircraft trajectory to obtain the auralized sound pressure signal at the receiver. This is achieved using the overlap-add method [8] to perform a DFT-based block convolution. 
 
-This process is performed separately for the direct and reflected sound paths. The same sound source signal is used for the direct and reflected ray paths, which differ only by their atmospheric transfer functions. The resulting signals are then summed to yield a **monoaural diotic** auralized sound pressure signal at the receiver. In this case, receiver model = omnidirection microphone. 
+This process is performed separately for the direct and reflected sound paths. The same sound source signal is used for the direct and reflected ray paths, which differ only by their atmospheric transfer functions (and, if coherence loss is considered, by the decorrelation filter applied to the reflected path). The resulting signals are then summed to yield a **monoaural diotic** auralized sound pressure signal at the receiver. In this case, receiver model = omnidirection microphone. 
 
 If **binaural rendering** is considered, the resulting sound signals for the direct and reflected sound paths are individually convoluted with HRTFs (left and right ears) obtained based on sound incidence angles calculated during the ART simulation. The resulting stereo signals of the direct and reflected sound paths are summed to obtain the auralized sound pressure signals at the receiver for the left and right ears. 
 
@@ -80,6 +92,10 @@ The output signals **(mono or stereo)** are stored as .WAV files, with amplitude
 [7] F. Brinkmann, A. Lindau, S. Weinzierl, G. Geissler, S. van de Par, M. Müller-Trapet, R. Opdam, and M. Vorländer, The FABIAN head-related transfer function data base, Data repository, 2020. DOI: [10.14279/depositonce-5718.5](https://doi.org/10.14279/depositonce-5718.5).
 
 [8] F. Wefers, Partitioned convolution algorithms for real-time auralization. Doctoral thesis, RWTH Aachen University, 2014. DOI: [10.18154/RWTH-2015-02185](https://doi.org/10.18154/RWTH-2015-02185).
+
+[9] R. Pieren and D. Lincke, Auralization of aircraft flyovers with turbulence-induced coherence loss in ground effect, J. Acoust. Soc. Am., vol. 151, no. 4, pp. 2453–2460, 2022. DOI: [10.1121/10.0010121](https://doi.org/10.1121/10.0010121)
+
+[10] V. E. Ostashev, D. J. Breton, and D. K. Wilson, Interference of the direct and ground-reflected waves in the atmosphere with volumetric scattering, J. Acoust. Soc. Am., vol. 156, no. 1, pp. 107–118, 2024. DOI: [10.1121/10.0026452](https://doi.org/10.1121/10.0026452)
 
 # 2. Framework architecture / Algorithmic overview
 
@@ -107,8 +123,10 @@ Exemplary input data is provided in the [input_data](input_data/) folder.
          - `tonalSynthesis()` : synthesis of tonal signals, used to auralize **fan harmonics** and **buzzsaw noise**
          - `broadbandSynthesis_smooth()` : functions to convert 1/3-octave band spectrogram into narrowband noise, then get signals using granular synthesis
          - `get_propagation()` : main function resposible to setup and perform sound propagation simulations using the ART software, output atmospheric transfer functions
+            - `get_coherence_factor_slanted()` / `get_coherence_factor_homogeneous()` : coherence factor between direct and reflected paths (if coherence loss is considered), using the turbulence parameters from `get_abl_turbulence()`
          - `apply_propagation()` : main function used to apply sound propagation effects on synthesized sound signals of aircraft (emissions + Doppler effect)
             - `get_FIR()` : get **Finite Impulse Response (FIR)** filters associated with atmospheric transfer functions and HRTFs (if required)
+               - `get_decorrelation_filter()` : random-phase decorrelation filters for the reflected path (if coherence loss is considered)
             - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
          - `save_wav()` : export .WAV files for a desired full-scale 
 <!-- >   
@@ -129,7 +147,7 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
    
-3. The `run_auralization.m` code provides examples on how to call the auralization framework.
+3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.
      
 <!-- >  Installation instructions (dependencies, setup).
 
@@ -162,4 +180,3 @@ This software is distributed together with several third-party packages and data
 # Disclaimer
 
 This repository contains 'work in progress' code for a research project. It is not a completed package or code library. As per the licensing information, the code is published WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
