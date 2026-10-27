@@ -1,8 +1,17 @@
 function PLOT_HRIR_spectrogram(input_direct, input_reflected, dt_panam, tag_title, tag_auralization, tag_save)
+% function PLOT_HRIR_spectrogram(input_direct, input_reflected, dt_panam, tag_title, tag_auralization, tag_save)
+%
+% Plots the HRIRs (FABIAN) applied to the direct and ground-reflected sound
+% paths over time, for the left and right ears (2x2 layout).
+%
+% If <input_reflected> is empty (consider_ground_reflection = 0, i.e. no
+% reflected path), only the direct path is plotted (1x2 layout).
 
 global save_mat_fig
 
 fontSize = 16;
+
+has_reflected = ~isempty( input_reflected ); % empty if consider_ground_reflection = 0
 
 stretchY = 1; % stretch plot in the vertical direction
 
@@ -14,7 +23,7 @@ set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(
 movegui(h, 'center');
 
 % t = tiledlayout('horizontal');
-t = tiledlayout(2,2);
+t = tiledlayout( 1 + has_reflected, 2 ); % 2x2 (direct + reflected) or 1x2 (direct only)
 t.TileSpacing = 'compact';
 
 % direct - left ear
@@ -44,8 +53,10 @@ ax1.Title.Interpreter = 'latex';
 
 % xline(90, 'k--');
 
-xticklabels(""); % Remove y axis numbering
-xlabel(""); % Remove y axis label
+if has_reflected % time axis is shown only on the bottom row
+    xticklabels(""); % Remove x axis numbering
+    xlabel(""); % Remove x axis label
+end
 colorbar('off'); % Remove the colorbar from the figure
 
 % direct - right ear
@@ -53,7 +64,6 @@ ax2 = nexttile;
 
 data = input_direct.rightEar;
 
-% Your function for plotting
 % Your function for plotting
 AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
 
@@ -74,68 +84,74 @@ ax2.Title.Interpreter = 'latex';
 
 yticklabels(""); % Remove y axis numbering
 ylabel(""); % Remove y axis label
-xticklabels(""); % Remove y axis numbering
-xlabel(""); % Remove y axis label
+if has_reflected % time axis is shown only on the bottom row
+    xticklabels(""); % Remove x axis numbering
+    xlabel(""); % Remove x axis label
+end
 colorbar('off'); % Remove the colorbar from the figure
 
 % xline(90, 'k--');
 
-% reflected - left ear
-ax3 = nexttile;
+if has_reflected
 
-data = input_reflected.leftEar;
+    % reflected - left ear
+    ax3 = nexttile;
 
-timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
+    data = input_reflected.leftEar;
 
-% Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20],'cb', false);
+    timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
-XLabelStr =  'Time, $t$ (s)';
+    % Your function for plotting
+    AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20],'cb', false);
 
-% Set axis labels and titles with LaTeX interpreter
-ax3.YLabel.String = 'Frequency, $f$ (Hz)';
-ax3.YLabel.Interpreter = 'latex';
-ax3.XTick = [0, floor(timeVec(round(length(timeVec)/2))), floor(timeVec(end))];
-% ax3.XTickLabel =  timeVec;
-ax3.XTickLabelRotation = 0;
-ax3.XLabel.Interpreter = 'latex';
-ax3.XLabel.String =  XLabelStr;
-ax3.XLabel.Rotation = 0;
-ax3.Title.String = ' Reflected - left ear';
-ax3.Title.FontWeight = 'normal';
-ax3.Title.Interpreter = 'latex';
+    XLabelStr =  'Time, $t$ (s)';
 
-% xline(90, 'k--');
+    % Set axis labels and titles with LaTeX interpreter
+    ax3.YLabel.String = 'Frequency, $f$ (Hz)';
+    ax3.YLabel.Interpreter = 'latex';
+    ax3.XTick = [0, floor(timeVec(round(length(timeVec)/2))), floor(timeVec(end))];
+    % ax3.XTickLabel =  timeVec;
+    ax3.XTickLabelRotation = 0;
+    ax3.XLabel.Interpreter = 'latex';
+    ax3.XLabel.String =  XLabelStr;
+    ax3.XLabel.Rotation = 0;
+    ax3.Title.String = 'Reflected - left ear';
+    ax3.Title.FontWeight = 'normal';
+    ax3.Title.Interpreter = 'latex';
 
-% reflected - right ear
-ax4 = nexttile;
+    % xline(90, 'k--');
 
-data = input_reflected.rightEar;
+    % reflected - right ear
+    ax4 = nexttile;
 
-timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
+    data = input_reflected.rightEar;
 
-% Your function for plotting
-AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
+    timeVec = linspace(0, size(data,2).*dt_panam,size(data,2)) ;
 
-XLabelStr =  'Time, $t$ (s)';
+    % Your function for plotting
+    AKp(data, 'm3d', 'y', timeVec, 'dr', [-20 20], 'cb', false);
 
-% Set axis labels and titles with LaTeX interpreter
-ax4.YLabel.String = 'Frequency, $f$ (Hz)';
-ax4.YLabel.Interpreter = 'latex';
-ax4.XTick = [0, floor(timeVec(round(length(timeVec)/2))), floor(timeVec(end))];
-% ax1.XTickLabel =  timeVec;
-ax4.XTickLabelRotation = 0;
-ax4.XLabel.Interpreter = 'latex';
-ax4.XLabel.String =  XLabelStr;
-ax4.XLabel.Rotation = 0;
-ax4.Title.String = 'Reflected - right ear';
-ax4.Title.FontWeight = 'normal';
-ax4.Title.Interpreter = 'latex';
+    XLabelStr =  'Time, $t$ (s)';
 
-% xline(90, 'k--');
+    % Set axis labels and titles with LaTeX interpreter
+    ax4.YLabel.String = 'Frequency, $f$ (Hz)';
+    ax4.YLabel.Interpreter = 'latex';
+    ax4.XTick = [0, floor(timeVec(round(length(timeVec)/2))), floor(timeVec(end))];
+    % ax4.XTickLabel =  timeVec;
+    ax4.XTickLabelRotation = 0;
+    ax4.XLabel.Interpreter = 'latex';
+    ax4.XLabel.String =  XLabelStr;
+    ax4.XLabel.Rotation = 0;
+    ax4.Title.String = 'Reflected - right ear';
+    ax4.Title.FontWeight = 'normal';
+    ax4.Title.Interpreter = 'latex';
 
-yticklabels(""); % Remove y axis numbering
-ylabel(""); % Remove y axis label
+    % xline(90, 'k--');
+
+    yticklabels(""); % Remove y axis numbering
+    ylabel(""); % Remove y axis label
+
+end
 
 % common settings
 
@@ -144,7 +160,7 @@ cb = colorbar;
 cb.Layout.Tile = 'east';
 
 cb.Label.Interpreter = 'latex';
-cb.Label.String = 'SPL, $L_{\mathrm{z}}$ (dB re 20 $\mu$Pa)';
+cb.Label.String = 'Magnitude (dB)'; % HRTF magnitude (transfer function), not a sound pressure level
 cb.FontSize = fontSize;
 
 if isempty(tag_auralization) % if tag_auralization is empty, dont save anything

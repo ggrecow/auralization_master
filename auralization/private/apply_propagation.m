@@ -152,9 +152,16 @@ if binaural_signal == 1
             case 'overallSignal'
 
                 % binaural - spectrogram of applied HRTFs
+                % (reflected HRIRs only exist if consider_ground_reflection = 1)
+                if isfield( FIR, 'HRIR_reflected' )
+                    HRIR_reflected = FIR.HRIR_reflected;
+                else
+                    HRIR_reflected = []; % only the direct path is plotted
+                end
+
                 tag_title =  ['OUTPUT - Spectrogram of  HRIRs  - ' tag_source];
                 tag_save = ['_' tag_source '_spectrogram_HRIR'];
-                PLOT_HRIR_spectrogram(FIR.HRIR_direct, FIR.HRIR_direct, dt_block, tag_title, tag_auralization, tag_save);
+                PLOT_HRIR_spectrogram(FIR.HRIR_direct, HRIR_reflected, dt_block, tag_title, tag_auralization, tag_save);
 
                 %  spectrogram - difference between mono and stereo (binaural) signals
                 tag_title =  ['OUTPUT - Spectrogram (binaural - mono) - ' tag_source];
@@ -162,7 +169,6 @@ if binaural_signal == 1
                 PLOT_spectrogram_difference(outputSignal.outputSignal, outputSignal.outputSignal_binaural, fs, tag_title, tag_auralization, tag_save);
         end
 
-    else
     end
 end
 
