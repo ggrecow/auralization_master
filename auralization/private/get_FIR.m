@@ -94,7 +94,7 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   (internal flag <hrtf_regularization>, disabled by default)
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRIRs resampled from 44.1 kHz (FABIAN) to <fs>
 % Gil Felix Greco, Braunschweig 28.09.2026 - diffuse-field equalization using the FABIAN CTF
-%   (<hrtf_df_equalization> in the .ini file, enabled by default)
+%   (<hrtf_df_equalization> in the .ini file, disabled by default)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
