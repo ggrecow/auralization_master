@@ -39,7 +39,12 @@ function T = get_abl_turbulence(z, atm)
 %     PROVISIONAL: QH < 0 is treated as neutral (QH = 0) and a warning is
 %     issued. This keeps shear turbulence but drops temperature turbulence.
 %
-% Author: Gil Felix Greco, Braunschweig
+% Author: Gil Felix Greco, Braunschweig (27.10.2026)
+%
+%   AI disclosure: Generative AI assistance (Anthropic Claude) was used to 
+%   develop this code under the author's direction. All codes were verified 
+%   by the author.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 persistent warned   % issue the stable-ABL warning only once per session
 
