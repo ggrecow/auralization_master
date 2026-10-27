@@ -94,6 +94,13 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% log all console output (temporary file, moved to the results folder once it exists)
+diary off;                                        % close any diary left open by a previous run
+logFile = [tempname '_auralization_log.txt'];
+diary( logFile );
+cleanupDiary = onCleanup( @() diary('off') );     % closes the log even if the run errors
+fprintf( 'Auralization started: %s\n', char(datetime('now')) );
+
 %% Deal with input args
 
 % remove trailing file separators (if any), so <main_input_path_in> can be given with or without them
@@ -169,6 +176,15 @@ end
 
 resultsFolder = create_auralization_results_folder( results_path, nReceiver );
 
+%% move the log into the results folder and keep logging there
+
+logFile_results = fullfile( resultsFolder.mainFolder, 'log.txt' );
+diary off;                                        % flush and close the temporary log
+if isfile( logFile_results ), delete( logFile_results ); end
+movefile( logFile, logFile_results );
+logFile = logFile_results;
+diary( logFile );                                 % diary appends, so the earlier messages are kept
+
 %% Input data (flight profile from PANAM)
 
 % name of the file containing the flight profile from PANAM
@@ -239,7 +255,11 @@ for i = 1:nReceiver
 
      close all;
 
- end
+end
+
+fprintf( 'Auralization finished: %s\n', char(datetime('now')) );
+
+%% function: read .ini file
 
     function ini_path = find_ini_file(folder)
         % Returns the full path of the only .ini file inside <folder>.

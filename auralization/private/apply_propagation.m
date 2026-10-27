@@ -70,12 +70,54 @@ tic;
 %% get transform atmospheric transfer function as FIR filters
 % and head-related impulse responses (if required)
 
+%% turbulence-induced coherence loss: decorrelation filters redrawn every 0.1 s
+% (Pieren & Lincke 2022), independent of dt_panam. Filters can only change at
+% block boundaries, so each PANAM step is split onto the common sample grid of
+% dt_panam and 0.1 s. Within a PANAM step the deterministic propagation is held
+% (as before); only the random decorrelation phase changes.
+
+dt_block = dt_panam;
+
+useCoherenceLoss = considerGroundReflection == 1 ...
+    && isfield( inputRayTracing, 'coherenceLoss' ) && inputRayTracing.coherenceLoss.consider == 1 ...
+    && ~( isfield( inputRayTracing, 'flushMountedReceiver' ) && inputRayTracing.flushMountedReceiver );
+
+if useCoherenceLoss
+
+    t_update = 0.1;                         % [s] filter update interval
+    nSubMax  = 20;                          % cost limit for the sub-block split
+
+    L_block  = round( fs*dt_panam );        % samples per PANAM step
+    L_update = round( fs*t_update );        % samples per filter epoch
+    L_sub    = gcd( L_block, L_update );    % common grid of both
+    nSub     = L_block / L_sub;             % sub-blocks per PANAM step
+
+    if nSub <= nSubMax
+        if nSub > 1
+            inputRayTracing = il_split_time_steps( inputRayTracing, nSub );
+            dt_block = L_sub / fs;
+        end
+        k = ( 0:numel(inputRayTracing.TF)-1 ).';
+        inputRayTracing.coherenceLoss.epoch = floor( k*L_sub / L_update );   % exact 0.1 s epochs
+        fprintf('\n- Coherence loss: decorrelation filters redrawn every %.3f s (%d sub-block(s) per PANAM step)\n', ...
+            t_update, nSub);
+    else
+        % no practical common grid: each block uses the epoch in which it starts
+        k = ( 0:numel(inputRayTracing.TF)-1 ).';
+        inputRayTracing.coherenceLoss.epoch = floor( k*L_block / L_update );
+        warning( 'auralization:coherenceUpdate', ...
+            ['dt_panam = %.4f s and 0.1 s have no practical common sample grid (fs = %d Hz). ' ...
+             'Decorrelation filters are redrawn at the block boundary following each 0.1 s mark.'], ...
+            dt_panam, fs );
+    end
+end
+
 FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, tag_auralization );
 
 %% apply FIRs to aircraft (emission+Doppler) signal using circular convolution
 
 % define synthesis block length [samples]
-BlockLen = round(fs*dt_panam);
+BlockLen = round(fs*dt_block);
 
 outputSignal.outputSignal = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse, 'mono' );
 
@@ -112,7 +154,7 @@ if binaural_signal == 1
                 % binaural - spectrogram of applied HRTFs
                 tag_title =  ['OUTPUT - Spectrogram of  HRIRs  - ' tag_source];
                 tag_save = ['_' tag_source '_spectrogram_HRIR'];
-                PLOT_HRIR_spectrogram(FIR.HRIR_direct, FIR.HRIR_direct, dt_panam, tag_title, tag_auralization, tag_save);
+                PLOT_HRIR_spectrogram(FIR.HRIR_direct, FIR.HRIR_direct, dt_block, tag_title, tag_auralization, tag_save);
 
                 %  spectrogram - difference between mono and stereo (binaural) signals
                 tag_title =  ['OUTPUT - Spectrogram (binaural - mono) - ' tag_source];
@@ -128,3 +170,18 @@ fprintf('\n- Applying propagation FIR filter/auralization time:\t%f sec\n', toc)
 
 end
 
+%% local function : il_split_time_steps
+
+function in = il_split_time_steps(in, nSub)
+% Repeat every PANAM time step nSub times. Deterministic propagation (TFs,
+% HRTF angles, propagation times, coherence parameter w) is held within a
+% PANAM step; only the random decorrelation phase changes between sub-blocks
+% (see <get_FIR>).
+
+in.TF = repelem( in.TF, nSub, 1 );
+in.spherical_angles_HRTF.direct_path    = repelem( in.spherical_angles_HRTF.direct_path,    nSub, 1 );
+in.spherical_angles_HRTF.reflected_path = repelem( in.spherical_angles_HRTF.reflected_path, nSub, 1 );
+in.propagation_time = repelem( in.propagation_time, nSub, 1 );
+in.coherenceLoss.w  = repelem( in.coherenceLoss.w,  nSub, 1 );
+
+end
