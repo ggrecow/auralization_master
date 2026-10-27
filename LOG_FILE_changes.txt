@@ -1,4 +1,104 @@
-++ 14.05.2025 (all these changes need to be transfered to SQAT_MASTER)
+++ 27.10.2026 - release v1.1 (all changes since v1.0, 22.09.2025)
+
+NEW FEATURES
+
+- Turbulence-induced coherence loss between the direct and ground-reflected sound (optional, .ini: consider_coherence_loss)
+	- per time step, a coherence factor Ccoh(f) = exp(-w*f^2) is calculated from the atmospheric boundary layer
+	  parameters (friction velocity, surface heat flux, boundary layer height, surface temperature)
+	- two models available (.ini: coherence_model):
+		slanted     -> Ostashev et al. (2024), JASA 156(1), 107-118, Eq. 52 (DEFAULT)
+		homogeneous -> Pieren & Lincke (2022), JASA 151(4), 2453-2460, Eq. 4
+	- the coherence loss is applied in <get_FIR> through random decorrelation filters, updated in fixed epochs of 0.1 s.
+	  The random realizations are reproducible through .ini: coherence_seed
+	- ignored (with console message) for flush-mounted receivers, as there is no second propagation path
+	- new folder auralization/coherence_loss: get_abl_turbulence, get_coherence_factor_slanted,
+	  get_coherence_factor_homogeneous, get_decorrelation_filter + verification routines
+	  (validate_ostashev, validate_decorrelation_filter, compare_coherence_models)
+
+- Diffuse-field (DF) equalization of the FABIAN HRTFs (optional, .ini: hrtf_df_equalization)
+	- HRIRs filtered with the inverted, 3rd-octave smoothed, minimum-phase common transfer function (CTF) of FABIAN,
+	  same operation as AKtools 'dir' mode
+	- new file third_party/FABIAN_HRTF_DATABASE_v4/FABIAN_CTF_measured_inverted_smoothed.mat (no SOFA API needed at runtime)
+	- new maintainer script utilities/convert_FABIAN_CTF_sofa2mat.m documenting how the .mat was generated
+	- use 1 for headphones equalized to a DF target; 0 for playback with a measured headphone compensation filter
+
+- Optional HRTF high-frequency regularization (internal flag hrtf_regularization in <get_FIR>, DEFAULT 0)
+	- flattens the HRTF magnitude between f1_reg = 4 kHz and f2_reg = 8 kHz, keeping the phase
+	- off by default, since it removes pinna notches and high-frequency ILD (elevation/front-back cues)
+
+- Flush-mounted receivers (zobs = 0) are now handled physically (closes #4)
+	- no reflected eigenray is searched; total pressure is p_tot = p_dir*(1+Q), i.e. +6 dB for a hard ground plate
+	- the previous workaround (truncating the receiver height to 1 cm) was removed. It created a spurious
+	  interference notch (approx. 8.6 kHz overhead) that only existed because of the arbitrary 1 cm
+	- binaural rendering is disabled with a warning for flush-mounted receivers (no head at zobs = 0)
+
+- Log file: all console output of a run is saved to results_auralization/log.txt (overwritten on each new run)
+
+- Cleaner plots (closes #5)
+	- new .ini parameter save_figs: 0 -> only .wav files and log.txt are saved; 1 -> figures are also saved (DEFAULT)
+	- new flag show_figures_on_screen (in <auralization_master>, DEFAULT 0): figures are created/saved without being
+	  displayed on screen
+	- if save_figs = 0 and show_figures_on_screen = 0, most figures are not created at all (faster runs)
+	- .wav files are now ALWAYS written. Before, the .wav save path was tied to the figure saving
+
+BUG FIXES
+
+- HRIRs are resampled from 44.1 kHz (FABIAN) to the framework sampling frequency. Before, at fs = 48 kHz, all HRTF spectral
+  features were shifted up by a factor fs/44100 (approx. 1.5 semitones) and all ITDs were scaled by 44100/fs
+- FIR filters: direct and reflected IRs are centered to the same delay, and the original relative delay is applied to the
+  reflected IR only. The sum of both IRs now matches the combined transfer function from ART. The relative delay is
+  computed as the minimum signed circular distance (IRs are periodic after the IFFT). Case without ground reflection fixed
+- <PLOT_HRIR_spectrogram> received the direct-path HRIR twice; now receives the direct and reflected HRIRs
+- <PLOT_spectrogram_difference> failed when mono and binaural signals had different lengths
+- <create_auralization_results_folder> used hardcoded '\' separators (failed on Linux/macOS) and assumed the results path
+  ends with a separator; a <results_path> without trailing separator created a wrongly named folder. Now uses <fullfile>
+- unit comments of sigma_e corrected (Pa.s/m^2, not kPa.s/m^2). Values and implementation were already correct
+
+ROBUSTNESS AND USABILITY
+
+- .ini handling in <auralization_master>:
+	- no <input_file_path> given: exactly one .ini must exist in <main_input_path>, otherwise an error is thrown
+	  (auralization:noIni, auralization:ambiguousIni). Before, a warning + return ended the .exe silently without results
+	- explicit <input_file_path> is checked (auralization:iniNotFound); unreadable files raise auralization:iniNotReadable
+	- relative <sounding_filepath> is resolved relative to the folder of the .ini (works from any MATLAB current folder
+	  and in the compiled .exe); absolute paths unchanged
+	- <main_input_path> can be given with or without a trailing file separator
+- save_figs and hrtf_df_equalization are validated (only 0 or 1 accepted)
+- show_propagation in <MASTER_auralization_EngineAirframe> now follows the <show> flag (was hardcoded to 1)
+- xline/yline replaced by version-safe wrappers (xline_local, yline_local) for MATLAB <= R2018a
+- example input data reorganized: flight data shared in input_data/, one subfolder (with one .ini) per example:
+  example_homogeneous_atmosphere/ and example_sounding_atmosphere/ (+ atmosphere_soundings/)
+- example script renamed run_auralization.m -> ex_run_auralization.m; paths built from the script location; optional
+  error-case tests (run_tests)
+- documentation: header of <auralization_master> (outputs, show/save options, propagation effects, binaural synthesis),
+  header of <get_FIR>, .ini files and README updated
+
+CHANGES IN RESULTS
+
+- mono results: unchanged, except for flush-mounted receivers (differ from the old 1 cm workaround above approx. 4 kHz)
+  and when coherence loss is switched on
+- binaural results: change for fs ~= 44.1 kHz (resampling fix) and because the HRTF regularization is now off by default.
+  The previous binaural results cannot be reproduced exactly, since they included the sampling frequency error
+
+BREAKING CHANGES
+
+- no .ini or more than one .ini found in <main_input_path> (and no <input_file_path> given) now throws an error
+- run_auralization.m renamed to ex_run_auralization.m
+- relative <sounding_filepath> is interpreted relative to the .ini folder, not MATLAB's current folder
+
+- DEFAULT values (.ini file)
+
+	save_figs = 1, defined in auralization_master
+	hrtf_df_equalization = 0, defined in get_FIR
+	consider_coherence_loss = 0, defined in get_propagation
+	coherence_model = slanted, defined in get_propagation
+	coherence_seed = 1, defined in get_propagation
+	turb_surface_temperature = ground temperature used for ray tracing, defined in get_propagation
+	turb_friction_velocity, turb_surface_heat_flux, turb_abl_height - no default, required if consider_coherence_loss = 1
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+++ 14.05.2026 (all these changes need to be transfered to SQAT_MASTER)
 
 - changed the way the impulse responses are processed. Adopted the approach of 1) centering IRs of the direct and reflected sound paths to the same time delay; 2) applying the original delay of the reflected IR with respect to the direct IR. Now, the sum of the direct and reflected IRs is the same as the original combined HRTF from ART. 
 

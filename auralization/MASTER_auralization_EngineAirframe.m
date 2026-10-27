@@ -148,7 +148,7 @@ OutputAuralization.emission.broadbandSignal_engine = BroadbandSignal_engine;
 OutputAuralization.emission.auralizedAirframeSignal = auralizedAirframeSignal;
 
 % plot propagation graphs?
-show_propagation = 1; % plot propagation results
+show_propagation = show; % plot propagation results
 
 % FFT length used for freq vector of atmospheric transfer
 % function and as nTaps of the FIR filter of atmospheric transfer function
