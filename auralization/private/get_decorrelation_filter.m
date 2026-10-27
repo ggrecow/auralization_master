@@ -16,15 +16,21 @@ function [B, bhat, Ccoh] = get_decorrelation_filter(w, nfft, fs, rngStream, opts
 %     B(f) = exp( j * beta(f) * phi ),  phi ~ U(-pi, pi),  0 <= beta <= 1
 % with Ccoh = sinc(beta) = sin(pi*beta)/(pi*beta).
 %
-% Call once per auralization time step (one PANAM step, dt_panam) with a
-% new random phase.
+% Each call draws one random phase vector phi from rngStream; the function
+% itself has no notion of time. The update rate is set by the caller:
+% get_FIR assigns one RandStream substream per filter epoch (0.1 s, epochs
+% defined in apply_propagation, following Pieren & Lincke 2022), so all
+% time steps within an epoch share the same phi, while beta still follows
+% the w of each time step.
 %
 % INPUTS
 %   w         : coherence parameter, Ccoh = exp(-w*f^2). w <= 0 -> B = 1.
 %   nfft      : double-sided FFT length of the transfer functions
 %               (numFreqBins_double_sided in get_FIR, 2^14 by default)
 %   fs        : sampling frequency [Hz]
-%   rngStream : (optional) RandStream for reproducibility. Default: global.
+%   rngStream : (optional) RandStream the random phase is drawn from. Set its
+%               substream before each call to control which filters share a
+%               phase (see get_FIR). Default: global stream.
 %   opts      : (optional) struct
 %       .N                  filter taps, default 2^11 (43 ms @ 48 kHz)
 %       .tukey              Tukey cosine fraction, default 0.25
@@ -54,7 +60,12 @@ function [B, bhat, Ccoh] = get_decorrelation_filter(w, nfft, fs, rngStream, opts
 %   R. Pieren, D. Lincke, JASA 151(4), 2453-2460 (2022).
 %   G. Kendall, Computer Music Journal 19(4), 71-87 (1995).
 %
-% Author: Gil Felix Greco, Braunschweig
+% Author: Gil Felix Greco, Braunschweig (27.10.2026)
+%
+%   AI disclosure: Generative AI assistance (Anthropic Claude) was used to 
+%   develop this code under the author's direction. All codes were verified 
+%   by the author.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 narginchk(3, 5);
 if nargin < 4 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end

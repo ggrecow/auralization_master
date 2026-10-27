@@ -51,7 +51,12 @@ function [w, Ccoh] = get_coherence_factor_slanted(hs, hr, R1, alpha2, atm, f)
 % VALIDATION
 %   Reproduces Fig. 3 of Ostashev et al. (2024), see validate_ostashev.m.
 %
-% Author: Gil Felix Greco, Braunschweig
+% Author: Gil Felix Greco, Braunschweig (27.10.2026)
+%
+%   AI disclosure: Generative AI assistance (Anthropic Claude) was used to 
+%   develop this code under the author's direction. All codes were verified 
+%   by the author.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 narginchk(5, 6);
 if nargin < 6, f = []; end
