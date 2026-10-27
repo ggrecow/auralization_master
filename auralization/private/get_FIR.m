@@ -183,6 +183,14 @@ if binaural_signal == 1
     end
 end
 
+%% Turbulence-induced coherence loss (optional), see <get_propagation>
+% The reflected path is filtered with random-phase decorrelation filters
+% (Pieren & Lincke 2022). Not applied to flush-mounted receivers.
+
+applyCoherenceLoss = considerGroundReflection == 1 ...
+    && isfield( input, 'coherenceLoss' ) && input.coherenceLoss.consider == 1 ...
+    && ~( isfield( input, 'flushMountedReceiver' ) && input.flushMountedReceiver );
+
 %% Get atmospheric transfer function and their impulse responses
 % direct path
 
@@ -241,6 +249,31 @@ if considerGroundReflection == 1
     impulseResponse_reflected  = ifft(TF_reflected_double_sided, 'symmetric');
     impulseResponse_combined  = ifft(TF_combined_double_sided, 'symmetric');
 
+    % decorrelated reflected IRs (turbulence-induced coherence loss)
+    if applyCoherenceLoss
+
+        % one random phase per filter epoch (0.1 s, see <apply_propagation>):
+        % all time steps of the same epoch use the same substream, hence the
+        % same random phase (beta still follows the w of each time step).
+        % Seeded here, so engine, airframe and overall signals use identical filters.
+        if isfield( input.coherenceLoss, 'epoch' )
+            epoch = input.coherenceLoss.epoch;
+        else
+            epoch = (0:numTimeSteps-1).';
+        end
+        rngStream = RandStream( 'mrg32k3a', 'Seed', input.coherenceLoss.seed );
+
+        impulseResponse_reflected_decorrelated = zeros( size(impulseResponse_reflected) );
+        for i = 1:numTimeSteps
+            rngStream.Substream = epoch(i) + 1;
+            B = get_decorrelation_filter( input.coherenceLoss.w(i), numFreqBins_double_sided, fs, rngStream );
+            TF_decorrelated = TF_reflected(:,i) .* B;
+            impulseResponse_reflected_decorrelated(:,i) = ...
+                ifft( [TF_decorrelated; conj(flipud(TF_decorrelated(2:end-1)))], 'symmetric' );
+        end
+
+    end
+
 end
 
 %% allign impulse responses of direct path and
@@ -250,7 +283,17 @@ end
 [hTOA_direct, ~, idx_d] = il_center_time_varying_ir(impulseResponse_direct);
 
 if considerGroundReflection == 1
-    [impulseResponse_reflected_centered, ~, idx_r] = il_center_time_varying_ir(impulseResponse_reflected);
+    [impulseResponse_reflected_centered, shifts_r, idx_r] = il_center_time_varying_ir(impulseResponse_reflected);
+
+    % with coherence loss: the peak position (and thus the relative delay) is
+    % taken from the CLEAN reflected IR; the decorrelated IR gets the same
+    % circular shift. The peak of a decorrelated IR is not reliable.
+    if applyCoherenceLoss
+        for k = 1:numTimeSteps
+            impulseResponse_reflected_centered(:,k) = ...
+                circshift( impulseResponse_reflected_decorrelated(:,k), shifts_r(k) );
+        end
+    end
 
     % compute delay on a wrapped circular domain
     N = size(impulseResponse_direct,1);

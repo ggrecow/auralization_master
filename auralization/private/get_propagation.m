@@ -420,6 +420,77 @@ for i = 1:size(source,1)
 
 end
 
+%% Turbulence-induced coherence loss between direct and ground-reflected sound (optional)
+% Per time step, a scalar w such that Ccoh(f) = exp(-w*f^2), see
+% <get_coherence_factor_slanted> (Ostashev et al. 2024) and
+% <get_coherence_factor_homogeneous> (Pieren & Lincke 2022). Straight-ray
+% geometry is used, consistent with the derivation of both models.
+% The decorrelation filters themselves are applied in <get_FIR>.
+
+coherenceLoss.consider = 0;
+if isfield( input_file, 'consider_coherence_loss' )
+    coherenceLoss.consider = str2double( input_file.consider_coherence_loss );
+end
+coherenceLoss.w = zeros( size(source,1), 1 );
+
+if coherenceLoss.consider == 1 && flushMountedReceiver
+    fprintf('\n- Coherence loss ignored: a flush-mounted receiver has no second propagation path.\n');
+    coherenceLoss.consider = 0;
+end
+
+if coherenceLoss.consider == 1
+
+    required = {'turb_friction_velocity', 'turb_surface_heat_flux', 'turb_abl_height'};
+    for k = 1:numel(required)
+        if ~isfield( input_file, required{k} )
+            error( 'auralization:coherenceLossInput', ...
+                '<consider_coherence_loss> = 1 requires <%s> in the input file.', required{k} );
+        end
+    end
+
+    atm_turb.ustar = str2double( input_file.turb_friction_velocity );  % friction velocity [m/s]
+    atm_turb.QH    = str2double( input_file.turb_surface_heat_flux );  % surface heat flux [W/m^2]
+    atm_turb.zi    = str2double( input_file.turb_abl_height );         % boundary layer height [m]
+    if isfield( input_file, 'turb_surface_temperature' )
+        atm_turb.Ts = str2double( input_file.turb_surface_temperature ) + 273.15; % [K]
+    else
+        atm_turb.Ts = temperatureCelsius + 273.15; % ground temperature used for ray tracing [K]
+    end
+
+    coherenceLoss.model = 'slanted';
+    if isfield( input_file, 'coherence_model' )
+        coherenceLoss.model = lower( strtrim( input_file.coherence_model ) );
+    end
+
+    hr = receiver(1,3);
+    for i = 1:size(source,1)
+        hs     = source(i,3);
+        xr     = norm( source(i,1:2) - receiver(1,1:2) );   % horizontal range [m]
+        R1     = norm( source(i,:)   - receiver(1,:) );     % direct path length [m]
+        alpha2 = atan2( hs + hr, xr );                      % grazing angle of the reflected ray [rad]
+
+        switch coherenceLoss.model
+            case 'slanted'
+                coherenceLoss.w(i) = get_coherence_factor_slanted( hs, hr, R1, alpha2, atm_turb );
+            case 'homogeneous'
+                coherenceLoss.w(i) = get_coherence_factor_homogeneous( hs, hr, R1, atm_turb );
+            otherwise
+                error( 'auralization:coherenceModel', ...
+                    'Unknown <coherence_model>: %s (use slanted or homogeneous).', coherenceLoss.model );
+        end
+    end
+
+    coherenceLoss.atm = atm_turb;
+    fprintf('\n- Coherence loss (%s model): w = %.2e ... %.2e s^2, Ccoh(1 kHz) = %.2f ... %.2f\n', ...
+        coherenceLoss.model, min(coherenceLoss.w), max(coherenceLoss.w), ...
+        exp(-max(coherenceLoss.w)*1e6), exp(-min(coherenceLoss.w)*1e6) );
+end
+
+coherenceLoss.seed = 1;
+if isfield( input_file, 'coherence_seed' )
+    coherenceLoss.seed = str2double( input_file.coherence_seed );
+end
+
 %% assign outputs
 
 % get spherical angles for output - angles already converted to the
@@ -434,6 +505,7 @@ OUT.propagation_time = propagation_time;
 OUT.TF = TF;
 OUT.nfft = nfft;
 OUT.flushMountedReceiver = flushMountedReceiver;
+OUT.coherenceLoss = coherenceLoss;
 
 clear idx_reflection hypotenuse;
 
