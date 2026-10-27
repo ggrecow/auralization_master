@@ -32,7 +32,7 @@ function [h_df, H_df, f] = get_diffuse_field_filter( fs, nGrid, fracOct, f_lim, 
 % The filter is cached (persistent) for identical inputs, since it only
 % depends on the HRTF database and not on the auralization case.
 %
-% Author: Gil Felix Greco, Braunschweig (225.09.2026 )
+% Author: Gil Felix Greco, Braunschweig (25.09.2026 )
 %
 %   AI disclosure: Generative AI assistance (Anthropic Claude) was used to 
 %   develop this code under the author's direction. All codes were verified 
