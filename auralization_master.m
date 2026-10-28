@@ -110,7 +110,8 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %
 %   <results_path>/results_auralization/
 %
-%       - log.txt : complete console output of the run (overwritten on each new run)
+%       - log.txt : complete console output of the run (overwritten on each new run),
+%         including all parameters read from the .ini file
 %
 %       - flight profile figure (only if save_figs = 1)
 %
@@ -185,6 +186,9 @@ if isfield( input_file, 'sounding_filepath' ) && ~isempty( input_file.sounding_f
     input_file.sounding_filepath = resolve_ini_path( input_file.sounding_filepath, fileparts(input_file_path) );
     fprintf( 'Atmospheric sounding file: %s\n', input_file.sounding_filepath );
 end
+
+% write all parameters read from the .ini file to the console (and thus to the log.txt)
+print_ini_parameters( input_file );
 
 % save figures in .fig?
 global save_mat_fig
@@ -360,6 +364,38 @@ fprintf( 'Auralization finished: %s\n', char(datetime('now')) );
             p = fullfile( ini_folder, p );
         end
     end % end function <resolve_ini_path>
+
+    function print_ini_parameters(ini)
+        % Prints all parameters read from the .ini file (after resolving relative
+        % paths) to the command window, and thus to the log.txt of the run.
+        % Parameters not defined in the .ini use their DEFAULT values, which are
+        % set inside the functions that use them (see the example .ini files).
+        % Variable names are unique on purpose: nested functions share variables
+        % with <auralization_master>.
+        fprintf( '\n*--------------------------------------------------------------------------*\n' );
+        fprintf( 'Parameters read from the .ini file\n' );
+        fprintf( '(parameters not listed here use their DEFAULT values)\n\n' );
+        if isempty( ini ) || ~isstruct( ini )
+            fprintf( '  (no parameters found)\n' );
+        else
+            ini_names = fieldnames( ini );
+            ini_width = max( cellfun( @length, ini_names ) );
+            for k_ini = 1:numel( ini_names )
+                ini_value = ini.( ini_names{k_ini} );
+                if isstruct( ini_value ) % [section] of the .ini file
+                    fprintf( '  [%s]\n', ini_names{k_ini} );
+                    sec_names = fieldnames( ini_value );
+                    for k_sec = 1:numel( sec_names )
+                        fprintf( '    %-*s = %s\n', ini_width, sec_names{k_sec}, ...
+                            char( string( ini_value.( sec_names{k_sec} ) ) ) );
+                    end
+                else
+                    fprintf( '  %-*s = %s\n', ini_width, ini_names{k_ini}, char( string( ini_value ) ) );
+                end
+            end
+        end
+        fprintf( '*--------------------------------------------------------------------------*\n' );
+    end % end function <print_ini_parameters>
 
     function Result = ini2struct(FileName)
         %==========================================================================
