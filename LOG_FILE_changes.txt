@@ -1,4 +1,4 @@
-++ 27.10.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ 28.10.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
 
@@ -11,6 +11,15 @@ NEW FEATURES
 	- the coherence loss is applied in <get_FIR> through random decorrelation filters, updated in fixed epochs of 0.1 s.
 	  The random realizations are reproducible through .ini: coherence_seed
 	- ignored (with console message) for flush-mounted receivers, as there is no second propagation path
+	- new plots comparing the transfer functions with and without coherence loss (only if coherence loss is applied,
+	  plotted once for the overall signal), new function <PLOT_coherence_loss_TF>:
+		*_coherence_loss_TF_difference_spectrogram.png -> level difference (with minus without) over time and
+		  frequency; symmetric colorbar adapted to each case (99th percentile of |dL|); dashed line at the closest
+		  point to the receiver (shortest direct-path propagation time)
+		*_coherence_loss_TF_comparison.pdf -> both transfer functions at the closest point and at the time step
+		  with the strongest coherence loss (largest w)
+	  Both transfer functions are built as H_direct + H_reflected, i.e. they differ only by the decorrelation filters
+	  actually used in the auralization (<get_FIR> output OUT.TF_coherenceLoss)
 	- new folder auralization/coherence_loss: get_abl_turbulence, get_coherence_factor_slanted,
 	  get_coherence_factor_homogeneous, get_decorrelation_filter + verification routines
 	  (validate_ostashev, validate_decorrelation_filter, compare_coherence_models)
@@ -32,7 +41,9 @@ NEW FEATURES
 	  interference notch (approx. 8.6 kHz overhead) that only existed because of the arbitrary 1 cm
 	- binaural rendering is disabled with a warning for flush-mounted receivers (no head at zobs = 0)
 
-- Log file: all console output of a run is saved to results_auralization/log.txt (overwritten on each new run)
+- Log file: all console output of a run is saved to results_auralization/log.txt (overwritten on each new run).
+  At the start of the log, all parameters read from the .ini file are listed (relative paths resolved); parameters
+  not listed use their DEFAULT values
 
 - Cleaner plots (closes #5)
 	- new .ini parameter save_figs: 0 -> only .wav files and log.txt are saved; 1 -> figures are also saved (DEFAULT)
