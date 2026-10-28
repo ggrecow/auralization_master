@@ -88,6 +88,11 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %      provided, so that they can be plotted or analysed:
 %       OUT.HRIR_direct, OUT.HRIR_reflected
 %
+%      If the turbulence-induced coherence loss is applied, the transfer functions
+%      (direct + reflected path, single-sided) without and with the decorrelation
+%      filters are also provided, for visualization (see <PLOT_coherence_loss_TF>):
+%       OUT.TF_coherenceLoss.coherent, OUT.TF_coherenceLoss.decorrelated
+%
 % Gil Felix Greco, Braunschweig 09.04.2025
 % Gil Felix Greco, Braunschweig 13.05.2026 - updated IR generation procedure to achieve CORRECT binaural auralizations
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRTF high-frequency regularization made optional
@@ -95,6 +100,8 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 % Gil Felix Greco, Braunschweig 25.09.2026 - HRIRs resampled from 44.1 kHz (FABIAN) to <fs>
 % Gil Felix Greco, Braunschweig 28.09.2026 - diffuse-field equalization using the FABIAN CTF
 %   (<hrtf_df_equalization> in the .ini file, disabled by default)
+% Gil Felix Greco, Braunschweig 28.10.2026 - transfer functions with/without coherence loss
+%   provided as output (OUT.TF_coherenceLoss) for visualization
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -264,10 +271,12 @@ if considerGroundReflection == 1
         rngStream = RandStream( 'mrg32k3a', 'Seed', input.coherenceLoss.seed );
 
         impulseResponse_reflected_decorrelated = zeros( size(impulseResponse_reflected) );
+        TF_reflected_decorrelated = zeros( size(TF_reflected) ); % kept for <PLOT_coherence_loss_TF>
         for i = 1:numTimeSteps
             rngStream.Substream = epoch(i) + 1;
             B = get_decorrelation_filter( input.coherenceLoss.w(i), numFreqBins_double_sided, fs, rngStream );
             TF_decorrelated = TF_reflected(:,i) .* B;
+            TF_reflected_decorrelated(:,i) = TF_decorrelated;
             impulseResponse_reflected_decorrelated(:,i) = ...
                 ifft( [TF_decorrelated; conj(flipud(TF_decorrelated(2:end-1)))], 'symmetric' );
         end
@@ -421,6 +430,15 @@ if considerGroundReflection == 1
         % HRIRs from FABIAN - used for visualizytion only
         OUT.HRIR_direct = HRIR_direct;
         OUT.HRIR_reflected= HRIR_reflected;
+    end
+
+    % transfer functions without and with turbulence-induced coherence loss
+    % (single-sided, [nBins x nTimeSteps]) - used for visualization only (see <PLOT_coherence_loss_TF>).
+    % Both are built as direct + reflected, so they differ ONLY by the decorrelation
+    % filters actually applied in the auralization (same seed and 0.1 s epochs)
+    if applyCoherenceLoss
+        OUT.TF_coherenceLoss.coherent     = TF_direct + TF_reflected;
+        OUT.TF_coherenceLoss.decorrelated = TF_direct + TF_reflected_decorrelated;
     end
 
 else % only direct path required

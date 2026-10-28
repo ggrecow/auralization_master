@@ -136,7 +136,15 @@ if show == true
     tag_title =  ['OUTPUT - Spectrogram of auralized emission after propagation - ' tag_source];
     tag_save = ['_' tag_source '_spectrogram_emission_propagated'];
     PLOT_spectrogram(outputSignal.outputSignal, fs, tag_title, tag_auralization, tag_save);
-else
+
+    % transfer functions with vs. without turbulence-induced coherence loss.
+    % The decorrelation filters are identical for the engine, airframe and overall
+    % signals (same seed), so they are plotted only once (overall signal)
+    if isfield( FIR, 'TF_coherenceLoss' ) && strcmp( tag_source, 'overallSignal' )
+        [~, idx_overhead] = min( inputRayTracing.propagation_time(:,1) ); % shortest direct path
+        PLOT_coherence_loss_TF( FIR.TF_coherenceLoss, inputRayTracing.coherenceLoss.w, fs, dt_block, ...
+            idx_overhead, tag_auralization );
+    end
 end
 
 % sound(outputSignal.outputSignal, 44100, 24 );
