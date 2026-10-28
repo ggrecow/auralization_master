@@ -1,0 +1,67 @@
+Auralization started: 27-Oct-2026 17:53:55
+Input file used: C:\Users\greco\Desktop\auralization_master\input_data\example_homogeneous_atmosphere\input_file_auralization.ini
+
+*--------------------------------------------------------------------------*
+Log from <PANAM_SQAT_data_conversion> function
+
+- Input file path: C:\Users\greco\Desktop\auralization_master\input_data\auralization_input.dat
+
+- Repeated values on the time vector were not found for any receiver.
+
+- Number of receiver(s) found: 1 
+
+Receiver position 1: x = 0	| y = 0 	| z = 1.2
+*--------------------------------------------------------------------------*
+Warning: file contains no data
+
+*--------------------------------------------------------------------------*
+Log of trim function (time based) 
+
+- Min. distance between source and receiver: 426.8 m
+- SPL on min. distance point: 131.7 dB SPL
+- Max. SPL on the data: 133.8 dB SPL
+- Desired time before/after max. SPL: 10 (s)
+- The auralised signal will be 20 (s) long
+*--------------------------------------------------------------------------*
+
+
+*--------------------------------------------------------------------------*
+Log from <SQAT_auralization_master> function (emission-based) 
+
+- TonalSynthesis (fan_harmonics): Synthesis time:	0.033755 sec
+
+- TonalSynthesis (buzzsaw): Synthesis time:	0.006209 sec
+
+- BroadbandSynthesis (engine): 1/3-OB to narrowband conversion time:	0.844526 sec
+- BroadbandSynthesis (engine): Synthesis time:	0.156723 sec
+
+- BroadbandSynthesis (airframe): 1/3-OB to narrowband conversion time:	0.787617 sec
+- BroadbandSynthesis (airframe): Synthesis time:	0.144566 sec
+
+- Coherence loss (slanted model): w = 0.00e+00 ... 1.17e-06 s^2, Ccoh(1 kHz) = 0.31 ... 1.00
+
+- Propagation (ART) - Calculation time (eigenrays) was	8.349387 sec
+
+- Coherence loss: decorrelation filters redrawn every 0.100 s (1 sub-block(s) per PANAM step)
+
+- Applying propagation FIR filter/auralization time:	3.050540 sec
+
+- Coherence loss: decorrelation filters redrawn every 0.100 s (1 sub-block(s) per PANAM step)
+
+- Applying propagation FIR filter/auralization time:	3.155897 sec
+
+- Coherence loss: decorrelation filters redrawn every 0.100 s (1 sub-block(s) per PANAM step)
+
+HRTF diffuse-field equalization disabled: measured (blocked ear-canal) HRTFs are used
+<a href="matlab: opentoline('C:\Users\greco\Desktop\auralization_master\auralization\private\apply_propagation.m',164,1)">164 </a>                PLOT_HRIR_spectrogram(FIR.HRIR_direct, HRIR_reflected, dt_block, tag_title, tag_auralization, tag_save);
+                PLOT_HRIR_spectrogram(FIR.HRIR_direct, HRIR_reflected, dt_block, tag_title, tag_auralization, tag_save);
+
+HRIR_reflected = []
+
+HRIR_reflected =
+
+     []
+
+                PLOT_HRIR_spectrogram(FIR.HRIR_direct, HRIR_reflected, dt_block, tag_title, tag_auralization, tag_save);
+
+if system_dependent('IsDebugMode')==1, dbquit; end
