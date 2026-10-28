@@ -48,7 +48,9 @@ BUG FIXES
 - FIR filters: direct and reflected IRs are centered to the same delay, and the original relative delay is applied to the
   reflected IR only. The sum of both IRs now matches the combined transfer function from ART. The relative delay is
   computed as the minimum signed circular distance (IRs are periodic after the IFFT). Case without ground reflection fixed
-- <PLOT_HRIR_spectrogram> received the direct-path HRIR twice; now receives the direct and reflected HRIRs
+- <PLOT_HRIR_spectrogram> received the direct-path HRIR twice; now receives the direct and reflected HRIRs.
+  Without ground reflection (consider_ground_reflection = 0), only the direct path is plotted (1x2 layout)
+  instead of erroring. Colorbar label corrected to "Magnitude (dB)" (HRTF magnitude, not SPL)
 - <PLOT_spectrogram_difference> failed when mono and binaural signals had different lengths
 - <create_auralization_results_folder> used hardcoded '\' separators (failed on Linux/macOS) and assumed the results path
   ends with a separator; a <results_path> without trailing separator created a wrongly named folder. Now uses <fullfile>
