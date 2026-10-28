@@ -14,6 +14,11 @@ function export_figures( filename, save_mat_fig, save_png, save_pdf )
 % Gil Felix Greco, Braunschweig 02.08.2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+global save_figs
+if ~isempty(save_figs) && ~save_figs
+    return;   % figures disabled: only .wav (and log) are written
+end
+
 if nargin < 3
     % save_mat_fig = 0;
     save_png = 1; % always save png
@@ -24,6 +29,7 @@ resolution = '-r600'; % Default resolution of 600 DPI
 
 if save_mat_fig == 1 % always good to save, but it may use a LOT OF SPACE is used everytime
 
+    set( gcf, 'CreateFcn', 'set(gcbo,''Visible'',''on'')' ); % reopen .fig visible
     saveas( gcf, filename, 'fig' );
 
 elseif save_png == 1 % preferred format for color plots like spectrograms
