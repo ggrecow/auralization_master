@@ -104,7 +104,7 @@ A high-level description of the code structure and input data is provided here.
 ## 2.1 Input data
 
 -  `auralization_input.dat`: input file from PANAM providing the sound source descriptions for different sound sources, in terms of SPLs over discrete time steps along the aircraft trajectory. Sound emissions are directional, meaning they are provided for each receiver position by considering a straight sound path between the source and receiver, thus incorporating the directivity of the sound sources. Receiver positions and PANAM emission angles are extracted from there.
--  `geschw_hoehe_verlauf.dat.dat`: Input file from PANAM providing the flight trajectory and corresponding operational conditions of the aircraft. Only used for plotting and for simulation of sound propagation using ray-tracing.
+-  `geschw_hoehe_verlauf.dat`: Input file from PANAM providing the flight trajectory and corresponding operational conditions of the aircraft. Only used for plotting and for simulation of sound propagation using ray-tracing.
 -  `input_file.ini`: configuration file providing settings for auralization signal processing and defining the atmospheric properties used in the ray-tracing simulations. The settings used for atmospheric properties follows the same format defined by the ART software.
 
 Exemplary input data is provided in the [input_data](input_data/) folder.
@@ -147,7 +147,7 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
    
-3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.
+3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
      
 <!-- >  Installation instructions (dependencies, setup).
 
