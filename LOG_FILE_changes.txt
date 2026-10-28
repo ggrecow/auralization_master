@@ -1,4 +1,4 @@
-++ 27.10.2026 - release v1.1 (all changes since v1.0, 22.09.2025)
+++ 27.10.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
 
