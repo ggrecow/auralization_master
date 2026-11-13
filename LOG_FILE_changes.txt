@@ -1,4 +1,4 @@
-++ 28.10.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ 11.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
 
@@ -24,12 +24,32 @@ NEW FEATURES
 	  get_coherence_factor_homogeneous, get_decorrelation_filter + verification routines
 	  (validate_ostashev, validate_decorrelation_filter, compare_coherence_models)
 
-- Diffuse-field (DF) equalization of the FABIAN HRTFs (optional, .ini: hrtf_df_equalization)
-	- HRIRs filtered with the inverted, 3rd-octave smoothed, minimum-phase common transfer function (CTF) of FABIAN,
-	  same operation as AKtools 'dir' mode
+- Diffuse-field (DF) and free-field (FF) equalized binaural signals (optional, .ini: generate_equalized_binaural, DEFAULT 0)
+	- the binaural signal is always rendered with the measured (blocked ear-canal) FABIAN HRTFs
+	  (*_overallSignal_binaural_FS*.wav), for headphone playback with a measured headphone filter
+	- with generate_equalized_binaural = 1, two versions of the SAME rendering are saved in addition, obtained with
+	  <convert_binaural_equalization> (exact: fixed linear filters per ear, linear block convolution without output windowing):
+		*_overallSignal_binaural_DFeq_FS*.wav -> HRTFs divided by the inverted, 3rd-octave smoothed, minimum-phase common
+		  transfer function (CTF) of FABIAN (as AKtools 'dir' mode). For diffuse-field equalized headphones
+		*_overallSignal_binaural_FFeq_FS*.wav -> HRTFs divided by the frontal HRTF (az = 0, el = 0) of the same ear, per
+		  third-octave band (50 Hz - 16 kHz). For COMPUTING METRICS (LAeq, LAmax, LAE, EPNL, ECMA-418-2 'free-frontal'),
+		  which already contain the outer-ear effect (the non-equalized signal would count it twice). For a frontal
+		  source, FF binaural = mono within 0.1 dB (third-octave bands and LAeq)
+	- the FF filter gains are set per third-octave band (iterated, so that the band energy of the equalized frontal HRTF
+	  is 0 dB in every band). A bin-by-bin inversion ('exact') or a sliding 1/3-octave smoothing (as for the CTF) were
+	  tested and rejected: the first turns the frontal pinna notches into narrow peaks (up to +14 dB in the 6.3 kHz band
+	  for other directions), the second leaves up to 2.5 dB band errors for frontal incidence
+	- the earlier option hrtf_df_equalization (DF equalization applied to the HRIRs during rendering, never released)
+	  was removed; if present in the .ini, it is ignored with a console note
+	- generate_equalized_binaural = 1 cannot be combined with hrtf_regularization (error)
+	- new folder auralization/hrtf_equalization: get_hrtf_equalization_filter (loads DF/FF filters),
+	  get_hrtf_ff_equalization (FF filter design), convert_binaural_equalization (none/DF/FF conversion of
+	  binaural signals, also usable on finished .wav files), validate_hrtf_equalization (verification)
 	- new file third_party/FABIAN_HRTF_DATABASE_v4/FABIAN_CTF_measured_inverted_smoothed.mat (no SOFA API needed at runtime)
-	- new maintainer script utilities/convert_FABIAN_CTF_sofa2mat.m documenting how the .mat was generated
-	- use 1 for headphones equalized to a DF target; 0 for playback with a measured headphone compensation filter
+	  and maintainer script utilities/convert_FABIAN_CTF_sofa2mat.m documenting how the .mat was generated
+	- new file third_party/FABIAN_HRTF_DATABASE_v4/FABIAN_FF_equalization_measured_HATO_0.mat (2048-tap filters per ear)
+	  and maintainer script utilities/generate_FABIAN_FF_equalization_mat.m. If the file is missing, the filters are
+	  designed on the fly (warning)
 
 - Optional HRTF high-frequency regularization (internal flag hrtf_regularization in <get_FIR>, DEFAULT 0)
 	- flattens the HRTF magnitude between f1_reg = 4 kHz and f2_reg = 8 kHz, keeping the phase
@@ -54,6 +74,10 @@ NEW FEATURES
 
 BUG FIXES
 
+- Level of the binaural signals at fs ~= 44.1 kHz: <resample> keeps the amplitude of a signal, so the resampled HRIRs had
+  a frequency response scaled by fs/44100 (+0.74 dB at fs = 48 kHz, at all frequencies). The resampled HRIRs are now
+  multiplied by 44100/fs. Binaural results at fs = 48 kHz are 0.74 dB lower than before; results at fs = 44.1 kHz and
+  mono results are unchanged (checked: bit-identical at 44.1 kHz)
 - HRIRs are resampled from 44.1 kHz (FABIAN) to the framework sampling frequency. Before, at fs = 48 kHz, all HRTF spectral
   features were shifted up by a factor fs/44100 (approx. 1.5 semitones) and all ITDs were scaled by 44100/fs
 - FIR filters: direct and reflected IRs are centered to the same delay, and the original relative delay is applied to the
@@ -76,7 +100,15 @@ ROBUSTNESS AND USABILITY
 	- relative <sounding_filepath> is resolved relative to the folder of the .ini (works from any MATLAB current folder
 	  and in the compiled .exe); absolute paths unchanged
 	- <main_input_path> can be given with or without a trailing file separator
-- save_figs and hrtf_df_equalization are validated (only 0 or 1 accepted)
+- save_figs and generate_equalized_binaural are validated (only 0 or 1 accepted; generate_equalized_binaural before the
+  rendering starts)
+- sampling_freq is validated before the rendering (in <MASTER_auralization_EngineAirframe>):
+	- error if fs < 44.1 kHz or not an integer (HRIRs and synthesis would lose high-frequency content)
+	- error if fs*dt (PANAM time step) is not an integer number of samples (the block length is round(fs*dt),
+	  so the auralized signal would drift in time)
+	- console note if fs > 48 kHz (no benefit) and if binaural with fs ~= 44.1 kHz (HRIRs resampled; binaural
+	  signals contain no energy above 22.05 kHz, the mono signal does)
+	- recommended: 48000 Hz (DEFAULT, native rate of ECMA-418-2 and most audio hardware) or 44100 Hz
 - show_propagation in <MASTER_auralization_EngineAirframe> now follows the <show> flag (was hardcoded to 1)
 - xline/yline replaced by version-safe wrappers (xline_local, yline_local) for MATLAB <= R2018a
 - example input data reorganized: flight data shared in input_data/, one subfolder (with one .ini) per example:
@@ -90,19 +122,22 @@ CHANGES IN RESULTS
 
 - mono results: unchanged, except for flush-mounted receivers (differ from the old 1 cm workaround above approx. 4 kHz)
   and when coherence loss is switched on
-- binaural results: change for fs ~= 44.1 kHz (resampling fix) and because the HRTF regularization is now off by default.
+- binaural results: change for fs ~= 44.1 kHz (resampling fix: spectral features and ITDs; and level, -0.74 dB at 48 kHz)
+  and because the HRTF regularization is now off by default.
   The previous binaural results cannot be reproduced exactly, since they included the sampling frequency error
 
 BREAKING CHANGES
 
 - no .ini or more than one .ini found in <main_input_path> (and no <input_file_path> given) now throws an error
+- sampling_freq < 44100 Hz, or with a non-integer fs*dt, now throws an error
 - run_auralization.m renamed to ex_run_auralization.m
 - relative <sounding_filepath> is interpreted relative to the .ini folder, not MATLAB's current folder
+- new folder auralization/hrtf_equalization must be on the path (added by startup_auralization.m)
 
 - DEFAULT values (.ini file)
 
 	save_figs = 1, defined in auralization_master
-	hrtf_df_equalization = 0, defined in get_FIR
+	generate_equalized_binaural = 0, defined in MASTER_auralization_EngineAirframe
 	consider_coherence_loss = 0, defined in get_propagation
 	coherence_model = slanted, defined in get_propagation
 	coherence_seed = 1, defined in get_propagation

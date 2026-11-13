@@ -44,8 +44,13 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %   5) optionally, a binaural (stereo) version of the overall aircraft signal is
 %       generated using the measured HRTFs of the FABIAN database, considering the
 %       incidence angles calculated by the ray-tracing and the head orientation
-%       defined in the <input_file.ini>. A diffuse-field equalization of the HRTFs
-%       can be applied (also defined in the <input_file.ini>).
+%       defined in the <input_file.ini>. The binaural signal is rendered with the
+%       measured (blocked ear-canal) HRTFs, for headphone playback with a measured
+%       headphone filter. Optionally (<generate_equalized_binaural> = 1 in the
+%       <input_file.ini>), two equalized versions of the same rendering are saved:
+%         DF -> diffuse-field equalized, for diffuse-field equalized headphones
+%         FF -> free-field equalized (frontal free-field related), for COMPUTING
+%               METRICS (LAeq, EPNL, ECMA-418-2 'free-frontal', ...)
 %
 %   Remarks:
 %
@@ -121,6 +126,9 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %           * <tag>_Receiver_<n>_airframeSignal_FS<dBFS>dBSPL.wav
 %           * <tag>_Receiver_<n>_overallSignal_FS<dBFS>dBSPL.wav
 %           * <tag>_Receiver_<n>_overallSignal_binaural_FS<dBFS>dBSPL.wav (only if binaural_signal = 1)
+%           * <tag>_Receiver_<n>_overallSignal_binaural_DFeq_FS<dBFS>dBSPL.wav and
+%             <tag>_Receiver_<n>_overallSignal_binaural_FFeq_FS<dBFS>dBSPL.wav (only if
+%             binaural_signal = 1 and generate_equalized_binaural = 1)
 %           * figures for checking the auralization (only if save_figs = 1)
 %
 %       The .wav files are ALWAYS written. <dBFS> is 94 dB SPL unless an

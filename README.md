@@ -65,12 +65,15 @@ The simpliest case is that of an omnidirectional microphone (with 0 dB gain for 
 Only measured HRTFs with zero-degree **Head-above Torso Orientation (HATO)** are considered in this work, meaning the head is aligned with the torso without any additional rotation in yaw, pitch or roll (i.e., looking
 straight ahead and not tilted up, down, or to the side, with ears at the same height). By default, the output audio after binaural rendering is **stereo (one channel per ear)**, representing **binaural-dichotic signals** with the receiver assumed to be facing the sound source. The position of the head can be rotated in the horizontal plane if desired.  
 
-**Headphone reproduction.** The FABIAN HRTFs are measured at the blocked ear-canal entrance, so the headphone transfer function must be compensated for correct playback. Two consistent options are supported:
+**Binaural signals: listening vs. metrics.** The FABIAN HRTFs are measured at the blocked ear-canal entrance and therefore contain the outer-ear response. The binaural signal is rendered with these HRTFs. With `generate_equalized_binaural = 1`, two equalized versions of the same rendering are saved as well:
 
-- **Diffuse-field equalized HRTFs** (`hrtf_df_equalization = 1`): the HRTFs are divided by the common transfer function of the database, i.e. their diffuse-field average. Played back over headphones designed to a diffuse-field target, no further filtering is needed. This generic compensation is well suited for demonstrations and informal listening.
-- **Raw HRTFs** (`hrtf_df_equalization = 0`, default) combined with a headphone filter measured on a dummy head or on the listeners. This is recommended for listening experiments. The FABIAN database provides such filters for about 35 headphone models.
+| file | reference | use for |
+|---|---|---|
+| `*_binaural` | blocked ear-canal entrance | headphones + measured headphone filter (listening experiments) |
+| `*_binaural_DFeq` | diffuse field (HRTFs / CTF) | headphones with a diffuse-field target |
+| `*_binaural_FFeq` | frontal free field (HRTFs / frontal HRTF, per third-octave band) | computing metrics (LAeq, EPNL, ECMA-418-2 `'free-frontal'`, ...) |
 
-The two options should not be combined, since the headphone response would then be compensated twice.
+Metrics already contain the outer ear of their reference sound field (explicitly in ECMA-418-2, implicitly in the A- and noy-weightings), so non-equalized signals would count it twice (about +10 dB LAeq for a frontal source). With FF equalization, a frontal source gives the same levels as the microphone (within 0.1 dB), so binaural and microphone metrics differ only due to the direction of incidence. The equalized versions are exact post-filters of the rendered signal (`convert_binaural_equalization`, also usable on finished .wav files). Do not combine the DF file with a measured headphone filter. Binaural signals contain no energy above 22.05 kHz.
 
 ## 1.5 Combining source descriptions with sound propagation effects 
 
@@ -136,6 +139,7 @@ Exemplary input data is provided in the [input_data](input_data/) folder.
                - `get_decorrelation_filter()` : random-phase decorrelation filters for the reflected path (if coherence loss is considered)
             - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
          - `save_wav()` : export .WAV files for a desired full-scale 
+         - `convert_binaural_equalization()` : DF and FF equalized versions of the binaural signal (if `generate_equalized_binaural = 1`), using the filters of `get_hrtf_equalization_filter()` (`DF`: inverted FABIAN CTF; `FF`: inverted frontal HRTF, precomputed with `get_hrtf_ff_equalization()`); can also be used on finished binaural files
 <!-- >   
 
 Main modules/folders

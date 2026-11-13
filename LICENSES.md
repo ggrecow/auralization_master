@@ -46,3 +46,4 @@ under their own respective licenses.
 - **Authors:** Neumann, Jan; Warzybok, Anna; Ernst, Stephan; Paul, Stefan; Fastl, Hugo; Kollmeier, Birger  
 - **Link:** https://depositonce.tu-berlin.de/items/3b423df7-a764-4ce1-9065-4e6034bba759  
 - **Note:** Attribution is required when using this dataset.  
+- **Derived files (not part of the original database):** `FABIAN_CTF_measured_inverted_smoothed.mat` (CTF converted from SOFA, `utilities/convert_FABIAN_CTF_sofa2mat.m`) and `FABIAN_FF_equalization_measured_HATO_0.mat` (free-field equalization filters designed from the measured HRTFs, `utilities/generate_FABIAN_FF_equalization_mat.m`).  
