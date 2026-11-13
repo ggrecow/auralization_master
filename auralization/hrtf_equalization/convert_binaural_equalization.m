@@ -73,18 +73,27 @@ f     = (0:N/2)' * fs/N;
 ears = {'left', 'right'};
 y_out = zeros( size(y_in) );
 for e = 1:2
-    Af = abs( fft( EQf.(ears{e}), Nd ) );
-    At = abs( fft( EQt.(ears{e}), Nd ) );
+    Af = il_mag( EQf.(ears{e}), Nd );
+    At = il_mag( EQt.(ears{e}), Nd );
     R  = At(1:Nd/2+1) ./ max( Af(1:Nd/2+1), realmin );   % magnitude ratio at fs_hrir grid
 
     % to fs grid; constant above fs_hrir/2 (no signal energy there)
     Rf = interp1( fd, R, min( f, fd(end) ), 'linear' );
+    Rf = Rf(:);
 
     h = il_min_phase( Rf, N, nTaps );
     h_conv.(ears{e}) = h;
     y_out(:,e) = fftfilt( h, y_in(:,e) );
 end
 
+end
+
+%% inline function: magnitude spectrum of a FIR filter as a COLUMN vector
+function A = il_mag( h, N )
+% zero-padded explicitly: fft(h, N) of a SCALAR (the 'none' filter, h = 1)
+% returns a row vector in MATLAB, which broke the vector operations below
+h = h(:);
+A = abs( fft( [h; zeros( N - numel(h), 1 )] ) );
 end
 
 %% inline function: minimum-phase FIR from a single-sided magnitude (real cepstrum)
