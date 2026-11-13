@@ -16,13 +16,11 @@
 %      renderings with <convert_binaural_equalization>, as done by the framework
 %   5) figure: frontal HRTF, DF and FF equalization filters (optional)
 %
-% Results obtained when the filters were generated (Octave, 11.11.2026), all
-% third-octave bands 50 Hz - 12.5 kHz: 1) max |dL| = 0.02 dB; 2) max |dL| = 0.11 dB;
-% 3) max |dL| = 0.08 dB per band, |dLAeq| < 0.07 dB; 4) max |dL| = 0.002 dB per
-% band, |dLAeq| < 0.001 dB. Residuals come from the finite FFT resolution at the
-% band edges and the truncation of the FF filters to 2048 taps.
+% Results (MATLAB, 13.11.2026), third-octave bands 50 Hz - 12.5 kHz:
+% 1) max |dL| = 0.02 dB; 2) max |dL| = 0.11 dB; 3) max |dL| = 0.05 dB per band,
+% |dLAeq| < 0.07 dB; 4) max |dL| = 0.007 dB per band, |dLAeq| < 0.003 dB.
 %
-% Author: Gil Felix Greco, Braunschweig 11.11.2026
+% Author: Gil Felix Greco, Braunschweig 13.11.2026
 %
 %   AI disclosure: Generative AI assistance (Anthropic Claude) was used to
 %   develop this code under the author's direction. All codes were verified
