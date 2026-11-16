@@ -1,4 +1,4 @@
-++ 11.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ 14.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
 
@@ -72,7 +72,27 @@ NEW FEATURES
 	- if save_figs = 0 and show_figures_on_screen = 0, most figures are not created at all (faster runs)
 	- .wav files are now ALWAYS written. Before, the .wav save path was tied to the figure saving
 
+- Head orientation check (binaural_signal = 1): for each receiver, the azimuth/elevation from which the direct sound
+  arrives at the first and last time step, the direction the head faces and the resulting HRTF azimuth
+  (front/left/back/right) are printed to the console and log.txt (new function <print_head_orientation>)
+
 BUG FIXES
+
+- HRTF angles now describe the direction from which each eigenray ARRIVES at the receiver (wavefront normal at the last
+  ray point, new function <get_arrival_angles>). Before, the reversed launch direction at the source was used
+  ([phi +- 180, theta - 90] for the direct path; launch azimuth and the straight-line elevation from the reflection
+  point for the reflected path). Both are identical for straight rays (homogeneous atmosphere without wind); with
+  refraction and wind (e.g. sounding atmospheres, wind profiles), the HRTFs were evaluated for the emission direction
+  instead of the incidence direction. The launch angles are still used for the comparison with the PANAM emission
+  angles (source directivity). The max. deviation between both directions (direct path) is printed in the log
+- Reflected path, HRTF azimuth: the branch condition tested the direct ray (eigenrays(i,1).phi) instead of the reflected
+  ray (eigenrays(i,2).phi). If the launch azimuths of both rays fell on different sides of 180 deg (possible below the
+  flight track, y = 0, where tiny lateral components of either sign occur), no branch was executed and the HRTF angles
+  of that time step stayed at [0, 0] (front, horizontal). The branch no longer exists (see above)
+- Reflected path: only the elevation is smoothed (moving average, 10 time steps), no longer the azimuth. Averaging the
+  azimuth mixed the 180 -> 0 deg jump at overhead (example trajectory: smoothed azimuth swept 162 -> 90 -> 18 deg within
+  approx. 1 s; direction error up to 3 deg, as the elevation is close to -90 deg there) and turns a 0/360 deg wrap into
+  approx. 180 deg (reflected sound from the back instead of the front). The smoothed elevation is computed as before
 
 - Level of the binaural signals at fs ~= 44.1 kHz: <resample> keeps the amplitude of a signal, so the resampled HRIRs had
   a frequency response scaled by fs/44100 (+0.74 dB at fs = 48 kHz, at all frequencies). The resampled HRIRs are now
@@ -117,6 +137,17 @@ ROBUSTNESS AND USABILITY
   error-case tests (run_tests)
 - documentation: header of <auralization_master> (outputs, show/save options, propagation effects, binaural synthesis),
   header of <get_FIR>, .ini files and README updated
+- head_orientation: description corrected (behaviour unchanged). It is a fixed yaw of the head in the x-y plane of the
+  PANAM coordinate system (same for all receivers, does not follow the aircraft); the HRTF azimuth is the arrival azimuth
+  (0 = +x, 90 = +y) + head_orientation, i.e. the head is turned CLOCKWISE: 0 -> faces +x, 90 -> -y, 180 -> -x, 270 -> +y.
+  The old description had 0 and 180 swapped (for a flight towards +x, 0 gives back -> overhead -> front and 180 gives
+  front -> overhead -> back) and the facing directions of 90 and 270 swapped (the ear order given was correct). The README
+  also stated that the receiver faces the sound source by default, which is not the case. The new description states
+  that it assumes a flight towards +x (PANAM approach and departure) and explains flights towards -x and lateral
+  receivers. Updated in the headers of <get_FIR>, <get_propagation> and <auralization_master>, both example .ini files
+  and README
+- head_orientation is validated (must be a number, error auralization:invalidHeadOrientation); read by the new
+  function <get_head_orientation>, used by <get_FIR> and <MASTER_auralization_EngineAirframe>
 
 CHANGES IN RESULTS
 
@@ -125,6 +156,13 @@ CHANGES IN RESULTS
 - binaural results: change for fs ~= 44.1 kHz (resampling fix: spectral features and ITDs; and level, -0.74 dB at 48 kHz)
   and because the HRTF regularization is now off by default.
   The previous binaural results cannot be reproduced exactly, since they included the sampling frequency error
+- binaural results, HRTF angles (14.11.2026):
+	- with refraction or wind (sounding atmospheres, wind profiles): arrival instead of launch direction
+	- homogeneous atmosphere without wind: direct path unchanged up to the eigenray accuracy (see the max. deviation
+	  printed in the log); reflected path changed only around overhead for receivers below the flight track (azimuth
+	  no longer smoothed) and at time steps affected by the reflected-path branch bug
+	- the meaning of head_orientation is unchanged (only its description was corrected)
+	- mono results unchanged (the angles are only used for the HRTFs)
 
 BREAKING CHANGES
 

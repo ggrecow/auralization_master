@@ -43,8 +43,16 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %
 %   5) optionally, a binaural (stereo) version of the overall aircraft signal is
 %       generated using the measured HRTFs of the FABIAN database, considering the
-%       incidence angles calculated by the ray-tracing and the head orientation
-%       defined in the <input_file.ini>. The binaural signal is rendered with the
+%       arrival directions of the eigenrays at the receiver (ray tracing) and the head
+%       orientation defined in the <input_file.ini>. <head_orientation> is a fixed yaw
+%       of the head in the x-y plane of the PANAM coordinate system (same for all
+%       receivers, does not follow the aircraft): 0 = head faces +x (DEFAULT),
+%       90 = faces -y, 180 = faces -x, 270 = faces +y. For a flight towards +x
+%       (PANAM approach and departure) over the receiver, 0 means the aircraft is
+%       heard from back -> overhead -> front and 180 means from front -> overhead ->
+%       back (see the header of <get_FIR> for flights towards -x and lateral
+%       receivers). The HRTF angles at the first and last time step are printed
+%       in the log for each receiver. The binaural signal is rendered with the
 %       measured (blocked ear-canal) HRTFs, for headphone playback with a measured
 %       headphone filter. Optionally (<generate_equalized_binaural> = 1 in the
 %       <input_file.ini>), two equalized versions of the same rendering are saved:
@@ -151,7 +159,7 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 % Institution: Technische Universität Braunschweig
 %
 % Date created: 11.04.2024
-% Date last modified: 27.10.2026
+% Date last modified: 14.11.2026
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

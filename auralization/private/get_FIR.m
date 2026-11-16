@@ -45,14 +45,29 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 % from the rendered signal (<generate_equalized_binaural> in the .ini file, see
 % <MASTER_auralization_EngineAirframe> and <convert_binaural_equalization>).
 %
-% Head orientation is defined by changing the azimuth angles, by the
-% <head_orientation> variable read in the input file. By default, the front of the
-% head points to the positive x-axis (head_orientation = 0 degrees), and angles
-% increase counterclockwise. For ex.,
-%   head_orientation = 0   -> source from front -> back (DEFAULT)
-%   head_orientation = 90  -> source from right ear -> left ear
-%   head_orientation = 180 -> source from back -> front
-%   head_orientation = 270 -> source from left ear -> right ear
+% Head orientation (<head_orientation> in the .ini file, in degrees, DEFAULT 0, read by
+% <get_head_orientation>) is a fixed rotation (yaw) of the head in the horizontal (x-y)
+% plane of the PANAM coordinate system. It is the same for all receivers and does not
+% follow the aircraft. The HRIRs are interpolated at the azimuth
+%   (azimuth of the sound arriving at the receiver) + head_orientation,
+% where the arrival azimuth from <get_propagation> is 0 deg = +x and 90 deg = +y (FABIAN
+% convention for a head facing +x: 0 = front, 90 = left ear). Increasing values therefore
+% turn the head CLOCKWISE seen from above (head facing direction = -head_orientation):
+%   head_orientation = 0   -> head faces +x (DEFAULT)
+%   head_orientation = 90  -> head faces -y
+%   head_orientation = 180 -> head faces -x
+%   head_orientation = 270 -> head faces +y
+% For a flight towards +x (PANAM approach and departure) and a receiver below the flight
+% track (y = 0), the listener hears the aircraft
+%   head_orientation = 0   -> from back -> overhead -> front
+%   head_orientation = 90  -> from right ear -> left ear
+%   head_orientation = 180 -> from front -> overhead -> back (faces the approaching aircraft)
+%   head_orientation = 270 -> from left ear -> right ear
+% For a flight towards -x, front/back and left/right are swapped. For a lateral receiver,
+% the aircraft passes on one side of the head; e.g. head_orientation = 0 and receiver at
+% y > 0: back -> right ear -> front. To face the flight track, use 90 (receiver at y > 0)
+% or 270 (receiver at y < 0). The arrival and HRTF azimuths of the direct path at the first
+% and last time step are printed for each receiver (<print_head_orientation>).
 %
 %   INPUTS
 %
@@ -109,21 +124,19 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   (<hrtf_df_equalization> no longer used): DF and FF equalized binaural signals are now
 %   derived from the rendered signal (<generate_equalized_binaural> in the .ini file).
 %   Resampled HRIRs scaled by fs_hrir/fs (frequency response preserved)
+% Gil Felix Greco, Braunschweig 14.11.2026 - description of <head_orientation> corrected
+%   (behaviour unchanged); <head_orientation> read and validated by <get_head_orientation>
 %
-%   AI disclosure (11.11.2026 changes): Generative AI assistance (Anthropic Claude) was
-%   used to develop this code under the author's direction. All codes were verified
-%   by the author.
+%   AI disclosure (11.11.2026 and 14.11.2026 changes): Generative AI assistance (Anthropic
+%   Claude) was used to develop this code under the author's direction. All codes were
+%   verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 global input_file
 
 if binaural_signal == 1
-    if isfield( input_file, 'head_orientation' )
-        head_orientation = str2double ( input_file.head_orientation );  % get <head_orientation> from <input_file>
-    else
-        head_orientation = 0; % default value
-    end
+    head_orientation = get_head_orientation(); % <head_orientation> from <input_file>, DEFAULT 0
 
     % sampling frequency of the FABIAN HRTF database
     fs_hrir_db = 44100;
@@ -302,7 +315,9 @@ if binaural_signal == 1
     fs_hrir = fs_hrir_db;
 
     % direct path
-    % incidence angles (spherical coordinates) of the incoming sound wave
+    % incidence angles (spherical coordinates) of the incoming sound wave, i.e. arrival
+    % direction at the receiver (0 = +x, 90 = +y); + head_orientation gives the head-related
+    % azimuth (head turned clockwise by head_orientation, see header)
     azimuth_direct = input.spherical_angles_HRTF.direct_path(:,1);
     elevation_direct = input.spherical_angles_HRTF.direct_path(:,2);
 

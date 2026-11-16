@@ -71,14 +71,17 @@
 %       combination of both eigenrays, respectively.  
 %
 %       spherical_angles_HRTF : struct
-%       spherical angles to use in the HRTF - correspond to the incidence angle of the rays on the receiver.
-%       Angles already converted to the head-centered spherical coordinates system adopted by 
-%       the FABIAN database (DOI: 10.14279/depositonce-5718.5), being phi= azimuth angle,
-%       and theta = elevation angle,  with [phi,theta] angles of direct and reflected rays in 
-%       each column, and source/receiver positions in each row. 
-%       Angle convention is:  
-%       Azimuth angle(s), in degrees:  (0=front, 90=left, 180/-180=back, 270/-90=right)
-%       Elevation angle(s), in degrees:  (90=North Pole, 0=front, -90=South Pole)
+%       angles to use in the HRTFs, i.e. the incidence (arrival) direction of the direct and
+%       reflected eigenrays at the receiver, in the fields direct_path and reflected_path
+%       ([azimuth elevation] in degrees, one row per source/receiver position). They give the
+%       direction from the receiver towards where the sound comes from, taken from the
+%       wavefront normal at the END of each eigenray (see <get_arrival_angles>). With
+%       refraction and wind, this differs from the reversed launch direction at the source.
+%       Angle convention (FABIAN database, DOI: 10.14279/depositonce-5718.5, for a head facing +x):
+%       Azimuth, in degrees: 0 = +x (front), 90 = +y (left), 180 = -x (back), 270 = -y (right)
+%       Elevation, in degrees: 90 = above (North Pole), 0 = horizontal, -90 = below (South Pole)
+%       The head orientation (<head_orientation> in the .ini file) is applied in <get_FIR>.
+%       Only the elevation of the reflected path is smoothed (moving average, 10 time steps).
 %
 %       propagation_time : vector
 %       contains propagation time of direct (1st column) and reflected (2nd
@@ -92,6 +95,13 @@
 % (Fabian database convention - https://doi.org/10.14279/depositonce-5718.5)
 % Author: Gil Felix Greco, Braunschweig 13.03.2025 - output <spherical_angles_HRTF> 
 % structure with angles for HRTF 
+% Author: Gil Felix Greco, Braunschweig 14.11.2026 - HRTF angles from the arrival direction
+% at the receiver (wavefront normal at the end of each eigenray, <get_arrival_angles>)
+% instead of the reversed launch direction; only the elevation of the reflected path is
+% smoothed. Fixes the reflected-path branch that tested the direct ray (eigenrays(i,1).phi)
+%
+%   AI disclosure (14.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -227,8 +237,9 @@ propDistanceReflectedRay = zeros(size(source,1),1);
 propDistanceDirectRay = zeros(size(source,1),1);
 launchAngle_direct = zeros(1, size(source,1));
 launchAngle_reflected = zeros(1, size(source,1));
-launchAngle_direct_spherical = zeros(size(source,1), 2);
-launchAngle_reflected_spherical = zeros(size(source,1), 2);
+arrivalAngle_direct_spherical = zeros(size(source,1), 2);    % HRTF angles, direct path
+arrivalAngle_reflected_spherical = zeros(size(source,1), 2); % HRTF angles, reflected path
+arrivalDeviation = zeros(size(source,1), 1); % arrival vs reversed launch direction, direct path [deg]
 propagation_time = zeros(size(source,1), 2);
 
 % define parameters used for ground reflection
@@ -294,13 +305,9 @@ for i = 1:size(source,1)
 
         TF{i,1} = ita_merge( ita_merge(TF_direct_ita, TF_reflected_ita), TF_combined_ita );
 
-        % HRTF angles: both "paths" arrive from the same direction
-        if eigenrays(i,1).phi >= 180
-            launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi - 180, eigenrays(i,1).theta - 90];
-        else
-            launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi + 180, eigenrays(i,1).theta - 90];
-        end
-        launchAngle_reflected_spherical(i,:) = launchAngle_direct_spherical(i,:);
+        % HRTF angles (arrival direction at the receiver): both "paths" arrive from the same direction
+        [arrivalAngle_direct_spherical(i,:), arrivalDeviation(i)] = get_arrival_angles( eigenrays(i,1) );
+        arrivalAngle_reflected_spherical(i,:) = arrivalAngle_direct_spherical(i,:);
 
         launchAngle_direct(i)    = 360 - eigenrays(i,1).n0.alpha_deg;
         launchAngle_reflected(i) = launchAngle_direct(i);
@@ -359,50 +366,27 @@ for i = 1:size(source,1)
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Get angles for HRTF
+        % The HRTFs need the direction from which the sound ARRIVES at the receiver. It is
+        % taken from the wavefront normal n at the last point of each eigenray (at the
+        % receiver): direction receiver -> sound = -n (see <get_arrival_angles>). For straight
+        % rays (homogeneous atmosphere without wind), this equals the reversed launch
+        % direction at the source, [phi +- 180, theta - 90], used until 13.11.2026. With
+        % refraction and wind, both differ: the launch angles (eigenrays(i,:).phi/theta, n0)
+        % describe the EMISSION direction (source directivity, see the ART vs PANAM
+        % comparison below) and are not used for the HRTFs.
+        % For the reflected eigenray, the last normal points upwards (after the ground
+        % reflection), so the sound arrives from below (negative elevation).
 
-        % launch angle (i.e. from the source perspective) -  phi is the azimuth angle and theta is the elevation angle
-        % original data convention from ITA/ART (spherical coordinates): theta = 0° points upwards (northpole)
-        % and 180° downwards (southpole) increasing clockwise. After 180°
-        % (southpole), decreases value until   0° points upwards (northpole)
-
-        % ART/ ITA
-        % AZIMUTH                         +y - phi = 90                            | ELEVATION                         +z-axis - theta = 0
-        %                                            |                                             |                                                |
-        %   phi = 180 -x-axis    - - Source - ->   +x-axis - phi = 0     |      Theta = 90  -x-axis   - - Source- - > +x-axis - theta = 90
-        %                                            |                                             |                                                |
-        %                                          -y - phi = 270                           |                                              -z-axis - theta = 180
-
-        % angles are converted to coordinates used by the Fabian HRTF database (https://doi.org/10.14279/depositonce-5718.5)
-        % Fabian angle convention is receiver-based (spherical coordinates): theta = 0°  alligns
-        % with x-axis and increases till 90° points upwards (northpole). After
-        % that, decrease till
-
-        % FABIAN database
+        % FABIAN database (https://doi.org/10.14279/depositonce-5718.5), receiver-based,
+        % head facing +x (head orientation is applied later, in <get_FIR>)
         % AZIMUTH                         +y - phi = 90 (left ear)             |   ELEVATION                               +z-axis - theta = 90 (top of the head)
         %                                            |                                            |                                                        |
         %   phi = 180 -x-axis    - - Receiver - ->   +x-axis - phi = 0   |    (back) Theta =  0  -x-axis   - - Receiver- - > +x-axis - theta = 0 (front)
         %                                            |                                            |                                                        |
         %                                          -y - phi = 270                          |                                                      -z-axis - theta = -90
 
-        if  eigenrays(i,1).phi >= 180
-            launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi - 180 , eigenrays(i,1).theta - 90];
-        elseif eigenrays(i,1).phi < 180
-            launchAngle_direct_spherical(i,:) = [ eigenrays(i,1).phi + 180 , eigenrays(i,1).theta - 90];
-        end
-
-        % get angles of the reflected ray
-        % distance between reflection (at z=0) and receiver, i.e. hypotenuse
-        % hypotenuse_reflected = norm( eigenrays(i, 2).r.cart(idx_reflection,:) - receiver  );
-        hypotenuse_reflected = norm(  receiver - eigenrays(i, 2).r.cart(idx_reflection,:)  );
-
-        %  angle between the ground plane and the ground reflected path [deg]
-        thetaReflected = rad2deg ( asin( receiver(3)  / hypotenuse_reflected ) );
-
-        if  eigenrays(i,2).phi >= 180
-            launchAngle_reflected_spherical(i,:) = [ eigenrays(i,2).phi - 180 ,  - thetaReflected ];
-        elseif eigenrays(i,1).phi < 180
-            launchAngle_reflected_spherical(i,:) = [ eigenrays(i,2).phi + 180 ,  - thetaReflected ];
-        end
+        [arrivalAngle_direct_spherical(i,:), arrivalDeviation(i)] = get_arrival_angles( eigenrays(i,1) );
+        arrivalAngle_reflected_spherical(i,:) = get_arrival_angles( eigenrays(i,2) );
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Get launch angles to compare with the ones from PANAM
@@ -497,9 +481,14 @@ end
 % spherical coordinates system used by the FABIAN database (phi= azimuth angle,
 % and theta = elevation angle)
 % with [phi,theta] angles of direct and reflected rays in each column, and source/receiver positions in each row 
-OUT.spherical_angles_HRTF.direct_path = launchAngle_direct_spherical ; 
-launchAngle_reflected_spherical_smooth = smoothdata(launchAngle_reflected_spherical, 'movmean', 10);
-OUT.spherical_angles_HRTF.reflected_path = launchAngle_reflected_spherical_smooth;  
+OUT.spherical_angles_HRTF.direct_path = arrivalAngle_direct_spherical ; 
+% Only the elevation of the reflected path is smoothed (moving average, 10 time steps). The
+% azimuth is not smoothed: a moving average of angles fails across the 180 -> 0 deg jump
+% at overhead and across a 0/360 deg wrap (the mean of 1 and 359 deg is 180 deg, i.e. the
+% reflected sound would come from the back instead of the front).
+arrivalAngle_reflected_spherical_smooth = arrivalAngle_reflected_spherical;
+arrivalAngle_reflected_spherical_smooth(:,2) = smoothdata( arrivalAngle_reflected_spherical(:,2), 'movmean', 10 );
+OUT.spherical_angles_HRTF.reflected_path = arrivalAngle_reflected_spherical_smooth;  
 
 OUT.propagation_time = propagation_time;
 OUT.TF = TF;
@@ -510,6 +499,8 @@ OUT.coherenceLoss = coherenceLoss;
 clear idx_reflection hypotenuse;
 
 fprintf('\n- Propagation (ART) - Calculation time (eigenrays) was\t%f sec\n', toc);
+fprintf(['\n- HRTF angles taken from the arrival direction at the receiver. Max. deviation from the ' ...
+    'reversed launch direction (direct path): %.2f deg (approx. 0 for straight rays)\n'], max(arrivalDeviation));
 
 %% plots
 
@@ -641,7 +632,7 @@ if show == 1
 
     % first tile - azimuth angle
     ax1 = nexttile;
-    plot( xx, launchAngle_direct_spherical(:,1), '-'); hold on;
+    plot( xx, arrivalAngle_direct_spherical(:,1), '-'); hold on;
     a = xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
@@ -663,7 +654,7 @@ if show == 1
 
 % second tile - elevation angle
     ax2 = nexttile;
-    plot( xx, launchAngle_direct_spherical(:,2), '-'); hold on;
+    plot( xx, arrivalAngle_direct_spherical(:,2), '-'); hold on;
     xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 90]);          
@@ -697,7 +688,7 @@ if show == 1
 
     % first tile - azimuth angle
     ax1 = nexttile;
-    plot( xx, launchAngle_reflected_spherical(:,1), '-'); hold on;
+    plot( xx, arrivalAngle_reflected_spherical(:,1), '-'); hold on;
     a = xline_local( xx(overhead_idx), 'k--' );
 
     ylim([0 360]);
@@ -719,8 +710,8 @@ if show == 1
 
 % second tile - elevation angle
     ax2 = nexttile;
-    b = plot( xx, launchAngle_reflected_spherical(:,2), '-'); hold on;
-    c = plot( xx, launchAngle_reflected_spherical_smooth(:,2), 'r-'); hold on;
+    b = plot( xx, arrivalAngle_reflected_spherical(:,2), '-'); hold on;
+    c = plot( xx, arrivalAngle_reflected_spherical_smooth(:,2), 'r-'); hold on;
     xline_local( xx(overhead_idx), 'k--' );
 
     ylim([-90 0]);          

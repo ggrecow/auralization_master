@@ -63,7 +63,18 @@ Example for the homogeneous-atmosphere case in [input_data](input_data/example_h
 The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database [7]. 
 
 Only measured HRTFs with zero-degree **Head-above Torso Orientation (HATO)** are considered in this work, meaning the head is aligned with the torso without any additional rotation in yaw, pitch or roll (i.e., looking
-straight ahead and not tilted up, down, or to the side, with ears at the same height). By default, the output audio after binaural rendering is **stereo (one channel per ear)**, representing **binaural-dichotic signals** with the receiver assumed to be facing the sound source. The position of the head can be rotated in the horizontal plane if desired.  
+straight ahead and not tilted up, down, or to the side, with ears at the same height). The output audio after binaural rendering is **stereo (one channel per ear)**, representing **binaural-dichotic signals**. The HRTFs are evaluated for the direction from which each eigenray (direct and ground-reflected) **arrives at the receiver**, taken from the ray-tracing wavefront normal at the receiver (with refraction and wind, this differs from the launch direction at the source, which describes the emission direction).
+
+**Head orientation.** The head is rotated in the horizontal plane with `head_orientation` (degrees, DEFAULT 0). It is a **fixed yaw in the x-y plane of the PANAM coordinate system**: the same for all receivers, and the head does **not** follow the aircraft. The HRTFs are evaluated at the arrival azimuth (0° = +x, 90° = +y) plus `head_orientation`, so increasing values turn the head clockwise seen from above. For a flight towards +x (PANAM approach and departure) and a receiver below the flight track (y = 0):
+
+| `head_orientation` | head faces | the listener hears the aircraft |
+|---|---|---|
+| 0 (DEFAULT) | +x (along the flight direction) | back → overhead → front |
+| 90 | −y | right ear → left ear |
+| 180 | −x (towards the approaching aircraft) | front → overhead → back |
+| 270 | +y | left ear → right ear |
+
+For a flight towards −x, front/back and left/right are swapped. For a lateral receiver, the aircraft passes on one side of the head; for example, with `head_orientation = 0` and a receiver at y > 0, the aircraft is heard from back → right ear → front. To face the flight track, use 90 (receiver at y > 0) or 270 (receiver at y < 0). The HRTF angles of the direct path at the first and last time step are printed in the log (`log.txt`) for each receiver, so the orientation can be checked there.
 
 **Binaural signals: listening vs. metrics.** The FABIAN HRTFs are measured at the blocked ear-canal entrance and therefore contain the outer-ear response. The binaural signal is rendered with these HRTFs. With `generate_equalized_binaural = 1`, two equalized versions of the same rendering are saved as well:
 

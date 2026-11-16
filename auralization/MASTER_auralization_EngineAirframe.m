@@ -41,6 +41,11 @@ function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_p
 % OUTPUTS
 %
 % Author: Gil Felix Greco, Braunschweig 20.06.2023
+% Gil Felix Greco, Braunschweig 14.11.2026 - head orientation check printed for each
+%   receiver (<print_head_orientation>)
+%
+%   AI disclosure (14.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -195,6 +200,12 @@ if receiver(3) == 0 && binaural_signal == 1
 end
 
 OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
+
+% print the HRTF angles of the direct path at the first and last time step (console and
+% log.txt), so the head orientation (<head_orientation> in the .ini file) can be checked
+if binaural_signal == 1
+    print_head_orientation( OUT_rayTracing.spherical_angles_HRTF, get_head_orientation(), receiver );
+end
 
 % apply propagation
 
