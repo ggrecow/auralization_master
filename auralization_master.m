@@ -37,9 +37,10 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %       (<doppler_method> = input, DEFAULT), or applied separately to the direct and
 %       ground-reflected sound paths by variable delay lines, driven by the
 %       propagation times of the eigenrays (<doppler_method> = delay_line; the PANAM
-%       emission data must then NOT contain the Doppler effect). With delay lines, the
-%       convective amplification can be added (<convective_amplification> = 1,
-%       DEFAULT), and the time axis of the auralization is the reception time.
+%       emission data must then NOT contain the Doppler effect). With delay lines, each
+%       PANAM time step is placed at the time it reaches the receiver (uneven intervals),
+%       instead of at constant intervals, and the convective amplification can be added
+%       (<convective_amplification> = 1; DEFAULT 0).
 %
 %   4) the calculated atmospheric transfer functions for each pair of
 %       source/receiver positions are transformed into FIR filters and

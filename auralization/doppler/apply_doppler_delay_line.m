@@ -39,7 +39,7 @@ function [y, gain] = apply_doppler_delay_line(x, fs, map, t_out, convective_ampl
 %   map   : struct from <get_doppler_mapping> (one sound path)
 %   t_out : [M x 1] reception times of the output samples [s]. The corresponding
 %           emission times must lie within the signal x (checked).
-%   convective_amplification : 0 or 1 (DEFAULT 1)
+%   convective_amplification : 0 or 1 (DEFAULT 0)
 %
 % OUTPUTS
 %   y    : [M x 1] signal at the receiver side of the path, before the
@@ -56,7 +56,7 @@ function [y, gain] = apply_doppler_delay_line(x, fs, map, t_out, convective_ampl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if nargin < 5 || isempty(convective_amplification)
-    convective_amplification = 1;
+    convective_amplification = 0;
 end
 
 x = x(:);

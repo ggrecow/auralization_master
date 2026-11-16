@@ -19,7 +19,7 @@ In the following, a general overview about the framework is provided, of which m
 
 ## 1.1 Sound source description 
 
-Predictions related to the to the _aircraft trajectory_ and associated _performance_ and _sound emissions_ are provided by **PANAM**. Therefore, the framework does not have any control over the models used to describe the sound source. As illustrated in the figure below, the sound emissions are provided in discrete time-steps (usually of $\Delta t = 0.1$ s), for which directional SPLs associated with a particular receiver position (assuming straight sound path connecting source-receiver pairs) are provided for different componential sound sources, namely: **Airframe noise**, **Engine noise**, **Fan tonal noise** and **Buzzsaw noise**. **Important: sound emissions are provided already including Doppler effect.** 
+Predictions related to the to the _aircraft trajectory_ and associated _performance_ and _sound emissions_ are provided by **PANAM**. Therefore, the framework does not have any control over the models used to describe the sound source. As illustrated in the figure below, the sound emissions are provided in discrete time-steps (usually of $\Delta t = 0.1$ s), for which directional SPLs associated with a particular receiver position (assuming straight sound path connecting source-receiver pairs) are provided for different componential sound sources, namely: **Airframe noise**, **Engine noise**, **Fan tonal noise** and **Buzzsaw noise**. **Important: by default (`doppler_method = input`), the sound emissions must already include the Doppler effect.** Alternatively, PANAM emissions *without* Doppler effect can be used with `doppler_method = delay_line` (see Section 1.5). The framework cannot detect which kind of data is given, so the choice is made by the user in the `.ini` file and must match the PANAM run. 
 
 <img src="utilities/images/lateral_and_frontal.svg" alt="sound source description" width="1200">
 
@@ -96,6 +96,13 @@ If **binaural rendering** is considered, the resulting sound signals for the dir
 
 The output signals **(mono or stereo)** are stored as .WAV files, with amplitude in Pascal units or any arbitrary full-scale.
 
+### Doppler effect
+
+Two methods are available, selected with `doppler_method` in the `.ini` file (a decision of the user, which must match the PANAM data):
+
+- `input` (DEFAULT): the PANAM emission data already contain the Doppler effect (Doppler-shifted frequencies). The buzzsaw tones, calculated from the engine speed, are Doppler-shifted with the PANAM emission angle (straight sound path). The same Doppler shift is used for the direct and reflected paths. The PANAM time steps are placed at the receiver at constant intervals ($\Delta t$ of the PANAM data), i.e. the timing at the receiver follows the timing of the source, while the Doppler shift of the frequencies comes from the PANAM data.
+- `delay_line`: the PANAM emission data do **not** contain the Doppler effect. The source signal is synthesized in emission time $t_e$, and each sound path is processed by a **variable delay line**, which reads the source signal at the emission time that arrives at each reception time $t_r = t_e + \tau(t_e)$, with the propagation time $\tau$ of the eigenray from the ray tracing. This gives the Doppler shift $f_r = f_e/D$, with the Doppler factor $D = \mathrm{d}t_r/\mathrm{d}t_e$ ($= 1 - M\cos\theta$ for straight rays), separately for the direct and reflected paths and consistent with refraction and wind. In other words, each PANAM time step is placed at the time it reaches the receiver, so the steps arrive at uneven intervals (closer together while the aircraft approaches, further apart while it moves away), and pitch and timing at the receiver both follow from the propagation times. The FIR filters of each path are then designed without the propagation delay and applied after the delay line, i.e. at the received frequencies. Optionally (`convective_amplification = 1`; DEFAULT 0), the convective amplification $-40\log_{10}D$ dB is applied to each path. The fractional delay uses a 32-tap windowed-sinc interpolator, and the propagation times are smoothed before differentiation; both are verified against analytical solutions in `validate_doppler_delay_line()`.
+
 ## 1.6 References
 
 [1] L. Bertsch, Noise Prediction within Conceptual Aircraft Design. Doctoral thesis, Technische Universität Braunschweig, 2013. DOI: [10.34912/n0is3-d3sign](https://doi.org/10.34912/n0is3-d3sign)
@@ -146,6 +153,7 @@ Exemplary input data is provided in the [input_data](input_data/) folder.
          - `get_propagation()` : main function resposible to setup and perform sound propagation simulations using the ART software, output atmospheric transfer functions
             - `get_coherence_factor_slanted()` / `get_coherence_factor_homogeneous()` : coherence factor between direct and reflected paths (if coherence loss is considered), using the turbulence parameters from `get_abl_turbulence()`
          - `apply_propagation()` : main function used to apply sound propagation effects on synthesized sound signals of aircraft (emissions + Doppler effect)
+            - `get_doppler_mapping()` / `apply_doppler_delay_line()` : Doppler effect (and convective amplification) per sound path by variable delay lines (only if `doppler_method = delay_line`)
             - `get_FIR()` : get **Finite Impulse Response (FIR)** filters associated with atmospheric transfer functions and HRTFs (if required)
                - `get_decorrelation_filter()` : random-phase decorrelation filters for the reflected path (if coherence loss is considered)
             - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
@@ -169,7 +177,7 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
    
-3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
+3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss, Doppler method) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
      
 <!-- >  Installation instructions (dependencies, setup).
 

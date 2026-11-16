@@ -11,24 +11,27 @@ function doppler = get_doppler_method()
 %       frequencies). The signals are synthesized from these data, and the propagation
 %       filters only add the propagation effects. The buzzsaw tones, which are
 %       calculated from the engine speed, are Doppler-shifted in <getTonalInput> with the
-%       PANAM emission angle. The time axis of the auralization is the emission time.
+%       PANAM emission angle. The PANAM time steps are placed at the receiver at constant
+%       intervals (dt), i.e. the timing at the receiver follows the timing of the source; the
+%       Doppler shift of the frequencies comes from the PANAM data.
 %       <convective_amplification> is not used: if needed, it must be in the input data.
 %
 %   doppler_method = delay_line
 %       The PANAM emission data do NOT contain the Doppler effect. The source signal is
-%       synthesized in emission time, and the Doppler effect is applied separately to the
-%       direct and ground-reflected sound paths with variable delay lines, driven by the
-%       propagation times of the eigenrays (see <get_doppler_mapping> and
-%       <apply_doppler_delay_line>). The time axis of the auralization is the reception
-%       time at the receiver (compressed while the aircraft approaches, stretched while
-%       it moves away). Using Doppler-shifted input data with this method applies the
-%       Doppler effect twice.
+%       synthesized in emission time. Each time step is placed at the time it reaches the
+%       receiver (emission time + propagation time of the eigenray), separately for the
+%       direct and ground-reflected sound paths, i.e. at uneven intervals (closer together
+%       while the aircraft approaches, further apart while it moves away). Compressing and
+%       stretching the signal between the steps produces the Doppler shift (variable delay
+%       lines, see <get_doppler_mapping> and <apply_doppler_delay_line>), so pitch and timing
+%       at the receiver both follow from the propagation times. Using Doppler-shifted input
+%       data with this method applies the Doppler effect twice.
 %
-%   convective_amplification = 1 (DEFAULT) or 0, only used with doppler_method = delay_line
+%   convective_amplification = 0 (DEFAULT) or 1, only used with doppler_method = delay_line
+%       0 -> no convective amplification (e.g. input data already contain it).
 %       1 -> the level of each sound path is changed by -40*log10(D), with the Doppler
 %            factor D = 1 - M*cos(theta) (+5.0 dB for M = 0.25 straight towards the receiver).
 %            Use this if the PANAM emission data do not contain it.
-%       0 -> no convective amplification (input data already contain it).
 %
 % OUTPUT : struct
 %   doppler.method                   : 'input' or 'delay_line'
@@ -62,7 +65,7 @@ if isfield( input_file, 'convective_amplification' )
             strtrim( char( input_file.convective_amplification ) ) );
     end
 else
-    convective_amplification = 1; % default value
+    convective_amplification = 0; % default value
 end
 
 doppler.method = method;

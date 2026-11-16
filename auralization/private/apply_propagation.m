@@ -46,7 +46,8 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 %
 %   input (DEFAULT) : the input signal already contains the Doppler effect (PANAM data).
 %       The FIR filters (both paths, with their relative delay) are applied block by
-%       block; the time axis is the emission time.
+%       block. The PANAM time steps are placed at the receiver at constant intervals (dt),
+%       i.e. the timing at the receiver follows the timing of the source.
 %
 %   delay_line : the input signal is synthesized in emission time WITHOUT Doppler
 %       effect. For each sound path (direct, reflected):
@@ -54,14 +55,15 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 %          at each reception time t_r = t_e + tau(t_e), with the propagation time tau of
 %          the eigenray (<get_doppler_mapping>, <apply_doppler_delay_line>). This gives
 %          the Doppler shift and the compression/stretching of the time axis, and the
-%          convective amplification if <convective_amplification> = 1 (DEFAULT)
+%          convective amplification if <convective_amplification> = 1 (DEFAULT 0)
 %       2) the FIR filters of the path (without propagation delay, see <get_FIR>) are
 %          applied block by block in reception time; each block uses the filter of the
 %          time step whose sound is heard at the start of the block
 %       3) both paths are summed. Their relative delay comes only from the delay lines.
-%       The output starts at the first reception time common to both paths, so its time
-%       axis is the reception time (shifted to start at zero) and its length differs from
-%       the input signal (by the change of the propagation time over the flyover).
+%       Each time step is thus placed at the time it reaches the receiver, i.e. at uneven
+%       intervals. The output starts at the first reception time common to both paths
+%       (shifted to zero), and its length differs from the input signal by the change of
+%       the propagation time over the flyover.
 %       With coherence loss, the decorrelation filters belong to the time steps (epochs
 %       of 0.1 s in emission time), so in reception time they change every 0.1*D s.
 %
@@ -297,7 +299,7 @@ if doppler.convective_amplification == 1
 else
     fprintf('  convective amplification OFF (convective_amplification = 0)\n');
 end
-fprintf('  time axis: emission %.2f s -> reception %.2f s (output starts at reception time %.3f s)\n', ...
+fprintf('  duration: %.2f s emitted by the source -> %.2f s at the receiver (first arrival at %.3f s, set to zero)\n', ...
     (nIn-1)/fs, (numel(t_out)-1)/fs, t_out(1) );
 maxResidual = max( abs( residualDelay ) );
 fprintf('  FIR filters: max. offset of the direct-path peak from the centre = %d sample(s)\n', maxResidual );
