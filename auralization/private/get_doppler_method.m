@@ -4,20 +4,20 @@ function doppler = get_doppler_method()
 % Reads how the Doppler effect is included in the auralization (<doppler_method> in the
 % .ini file) and whether the convective amplification is applied (<convective_amplification>),
 % and checks both values. The method is a decision of the user, made for each run: it
-% must match the PANAM input data, which cannot be checked by the code.
+% must match the sound emission predictions (e.g. PANAM), which cannot be checked by the code.
 %
 %   doppler_method = input (DEFAULT)
-%       The PANAM emission data already contain the Doppler effect (Doppler-shifted
+%       The sound emission predictions already contain the Doppler effect (Doppler-shifted
 %       frequencies). The signals are synthesized from these data, and the propagation
 %       filters only add the propagation effects. The buzzsaw tones, which are
 %       calculated from the engine speed, are Doppler-shifted in <getTonalInput> with the
-%       PANAM emission angle. The PANAM time steps are placed at the receiver at constant
+%       emission angle of the input data. The time steps are placed at the receiver at constant
 %       intervals (dt), i.e. the timing at the receiver follows the timing of the source; the
-%       Doppler shift of the frequencies comes from the PANAM data.
+%       Doppler shift of the frequencies comes from the predictions.
 %       <convective_amplification> is not used: if needed, it must be in the input data.
 %
 %   doppler_method = delay_line
-%       The PANAM emission data do NOT contain the Doppler effect. The source signal is
+%       The sound emission predictions do NOT contain the Doppler effect. The source signal is
 %       synthesized in emission time. Each time step is placed at the time it reaches the
 %       receiver (emission time + propagation time of the eigenray), separately for the
 %       direct and ground-reflected sound paths, i.e. at uneven intervals (closer together
@@ -31,7 +31,7 @@ function doppler = get_doppler_method()
 %       0 -> no convective amplification (e.g. input data already contain it).
 %       1 -> the level of each sound path is changed by -40*log10(D), with the Doppler
 %            factor D = 1 - M*cos(theta) (+5.0 dB for M = 0.25 straight towards the receiver).
-%            Use this if the PANAM emission data do not contain it.
+%            Use this if the sound emission predictions do not contain it.
 %
 % OUTPUT : struct
 %   doppler.method                   : 'input' or 'delay_line'

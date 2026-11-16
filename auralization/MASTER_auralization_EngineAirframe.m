@@ -45,7 +45,7 @@ function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_p
 %   receiver (<print_head_orientation>)
 % Gil Felix Greco, Braunschweig 16.11.2026 - Doppler effect by variable delay lines
 %   (<doppler_method> = delay_line, see <get_doppler_method>); Doppler factor from the
-%   propagation times compared with the PANAM straight-line estimate
+%   propagation times compared with the straight-line estimate from the input data
 %
 %   AI disclosure (14.11.2026 and 16.11.2026 changes): Generative AI assistance (Anthropic
 %   Claude) was used to develop this code under the author's direction. All codes were
@@ -95,7 +95,7 @@ if isfield( input_file, 'hrtf_df_equalization' )
 end
 
 % Doppler method (see <get_doppler_method>), read and validated before the rendering.
-% It is a decision of the user and must match the PANAM input data (with or without
+% It is a decision of the user and must match the sound emission predictions (with or without
 % Doppler effect), which cannot be checked here.
 doppler = get_doppler_method();
 if strcmp( doppler.method, 'delay_line' )
@@ -108,10 +108,10 @@ if strcmp( doppler.method, 'delay_line' )
     else
         txt_ca = 'OFF';
     end
-    fprintf(['\n- Doppler effect: variable delay lines (doppler_method = delay_line). The PANAM ' ...
-             'emission data must NOT contain the Doppler effect. Convective amplification: %s\n'], txt_ca );
+    fprintf(['\n- Doppler effect: variable delay lines (doppler_method = delay_line). The sound ' ...
+             'emission predictions must NOT contain the Doppler effect. Convective amplification: %s\n'], txt_ca );
 else
-    fprintf('\n- Doppler effect: included in the PANAM emission data (doppler_method = input)\n');
+    fprintf('\n- Doppler effect: included in the sound emission predictions (doppler_method = input)\n');
     if isfield( input_file, 'convective_amplification' )
         fprintf('  NOTE: <convective_amplification> is only used with doppler_method = delay_line and is ignored.\n');
     end
@@ -228,7 +228,7 @@ end
 
 OUT_rayTracing = get_propagation( flight_profile, receiver, nfft, time_PANAM_auralization, emission_angle_panam, show_propagation, tag_auralization) ;
 
-% Doppler factor from the propagation times vs. PANAM straight-line estimate (check only)
+% Doppler factor from the propagation times vs. straight-line estimate from the input data (check only)
 if strcmp( doppler.method, 'delay_line' )
     il_check_doppler_factor( input, OUT_rayTracing, dt_panam, show, tag_auralization );
 end
@@ -332,7 +332,7 @@ end
 function il_check_doppler_factor( input, OUT_rayTracing, dt_panam, show, tag_auralization )
 % Doppler factor D = dt_r/dt_e of the direct path, as used by the delay lines (from the
 % propagation times of the eigenrays), compared with the straight-line estimate from the
-% PANAM data, D = 1 - M*cos(phix), used for the buzzsaw tones with doppler_method = input
+% input data (e.g. PANAM), D = 1 - M*cos(phix), used for the buzzsaw tones with doppler_method = input
 % (see <getTonalInput>). Both should agree closely for a homogeneous atmosphere without
 % wind; refraction and wind change D from the propagation times only.
 
@@ -349,7 +349,7 @@ if hasPanam
         D_panam(i) = 1 - ( input{i}.vel ./ input{i}.sound_speed ) .* cos( deg2rad( input{i}.phix ) );
     end
     fprintf(['- Doppler factor of the direct path: %.3f ... %.3f (from propagation times), ' ...
-             '%.3f ... %.3f (PANAM straight-line estimate); max. difference %.3f\n'], ...
+             '%.3f ... %.3f (straight-line estimate from the input data); max. difference %.3f\n'], ...
         min(map.D), max(map.D), min(D_panam), max(D_panam), max( abs( map.D - D_panam ) ) );
 end
 
@@ -365,7 +365,7 @@ if show == true
     if hasPanam
         b = plot( t_e, D_panam, 'r--' );
         a = [a b];
-        leg{end+1} = 'PANAM: $1 - M\cos\phi_x$';
+        leg{end+1} = 'input data: $1 - M\cos\phi_x$';
     end
     grid on;
     xlabel('Emission time, $t_{\mathrm{e}}$ (s)', 'Interpreter', 'Latex');

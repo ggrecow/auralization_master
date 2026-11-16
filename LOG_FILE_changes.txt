@@ -3,22 +3,24 @@
 NEW FEATURES
 
 - Doppler effect by variable delay lines (optional, .ini: doppler_method, DEFAULT input = previous behaviour)
-	- doppler_method = input: the PANAM emission data already contain the Doppler effect (as before; results unchanged)
-	- doppler_method = delay_line: the PANAM emission data do NOT contain the Doppler effect. The source signal is synthesized
+	- doppler_method = input: the sound emission predictions (e.g. PANAM) already contain the Doppler effect (as before;
+	  results unchanged)
+	- doppler_method = delay_line: the sound emission predictions do NOT contain the Doppler effect. The source signal is synthesized
 	  in emission time, and the Doppler effect is applied separately to the direct and ground-reflected sound paths by variable
 	  delay lines: each output sample at the reception time t_r reads the source signal at the emission time t_e with
 	  t_r = t_e + tau(t_e), tau = propagation time of the eigenray (ray tracing). Consequences:
-		- Doppler shift per path, consistent with the ray tracing (refraction, wind); before, one shift from PANAM
-		  (straight sound path) was used for both paths
-		- each PANAM time step is placed at the time it reaches the receiver, i.e. at uneven intervals (closer together while
+		- Doppler shift per path, consistent with the ray tracing (refraction, wind); before, one shift from the
+		  predictions (straight sound path) was used for both paths
+		- each time step of the predictions is placed at the time it reaches the receiver, i.e. at uneven intervals (closer together while
 		  the aircraft approaches, further apart while it moves away), so pitch and timing at the receiver both follow from
 		  the propagation times. With doppler_method = input, the steps are placed at constant intervals (timing of the
-		  source) and the Doppler shift of the frequencies comes from the PANAM data. The .wav files are slightly shorter or
+		  source) and the Doppler shift of the frequencies comes from the predictions. The .wav files are slightly shorter or
 		  longer than with doppler_method = input
 		- relative delay between direct and reflected path applied continuously (sub-sample), not per block in integer samples
 		- propagation filters (spreading, absorption, ground reflection, HRTFs) act at the received frequencies
-	- the choice is a decision of the user and must match the PANAM data; it cannot be detected from the data. PANAM data with
-	  Doppler effect + delay_line applies the Doppler effect twice
+	- the choice is a decision of the user and must match the sound emission predictions (for PANAM: a run with or without
+	  Doppler effect); it cannot be detected from the data. Predictions with Doppler effect + delay_line apply the Doppler
+	  effect twice
 	- convective amplification (.ini: convective_amplification, 0/1, DEFAULT 0, only used with delay_line): level change of
 	  -40*log10(D) per path, D = dt_r/dt_e = 1 - M*cos(theta) from the propagation times (M = 0.25: +5.0 dB approaching,
 	  -3.9 dB departing)
@@ -34,7 +36,7 @@ NEW FEATURES
 	- buzzsaw tones (<getTonalInput>) are not Doppler-shifted with delay_line
 	- log: Doppler factor range per path, convective gain, smoothing rms, emission vs reception duration, check of the FIR
 	  filter centring (warning if the direct-path peak is more than 2 samples off-centre); Doppler factor of the direct path
-	  from the propagation times compared with the PANAM straight-line estimate 1 - M*cos(phix) (+ plot *_Doppler_factor.pdf)
+	  from the propagation times compared with the straight-line estimate from the input data, 1 - M*cos(phix) (+ plot *_Doppler_factor.pdf)
 	- delay_line only for emission data (error otherwise); D <= 0 (supersonic towards the receiver) -> error
 	- new folder auralization/doppler: get_doppler_mapping, apply_doppler_delay_line, validate_doppler_delay_line
 	  (verification against analytical flyovers: level flight 300 m and 60 m, accelerating climbing departure, with and without

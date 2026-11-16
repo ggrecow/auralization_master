@@ -44,9 +44,9 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 %
 % DOPPLER EFFECT (<doppler_method> in the .ini file, see <get_doppler_method>):
 %
-%   input (DEFAULT) : the input signal already contains the Doppler effect (PANAM data).
+%   input (DEFAULT) : the input signal already contains the Doppler effect (sound emission predictions).
 %       The FIR filters (both paths, with their relative delay) are applied block by
-%       block. The PANAM time steps are placed at the receiver at constant intervals (dt),
+%       block. The time steps of the predictions are placed at the receiver at constant intervals (dt),
 %       i.e. the timing at the receiver follows the timing of the source.
 %
 %   delay_line : the input signal is synthesized in emission time WITHOUT Doppler
@@ -101,7 +101,7 @@ tic;
 
 %% Doppler effect by variable delay lines (optional, see header)
 % the mapping between emission and reception time of each path is computed from the
-% propagation times of the PANAM time steps, before they are split for the coherence loss
+% propagation times of the time steps of the input data, before they are split for the coherence loss
 
 doppler = get_doppler_method();
 useDelayLine = strcmp( doppler.method, 'delay_line' );
