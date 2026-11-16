@@ -1,7 +1,8 @@
 # Licenses for Distributed Components
 
 This software package includes third-party components that are redistributed
-**in their original, unmodified forms** for user convenience.  
+**in their original, unmodified forms** for user convenience. Files derived from
+third-party data are listed under the respective component.  
 
 The license of this software (Apache License 2.0) applies **only** to the
 original code provided in this repository. All third-party components remain
@@ -42,8 +43,9 @@ under their own respective licenses.
 ---
 
 ## FABIAN HRTF Database v4
-- **License:** Creative Commons Attribution (CC-BY)  
-- **Authors:** Neumann, Jan; Warzybok, Anna; Ernst, Stephan; Paul, Stefan; Fastl, Hugo; Kollmeier, Birger  
+- **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)  
+- **Authors:** Brinkmann, Fabian; Lindau, Alexander; Weinzierl, Stefan; Geissler, Gunnar; van de Par, Steven; Müller-Trapet, Markus; Opdam, Rob; Vorländer, Michael  
+- **DOI:** [10.14279/depositonce-5718.5](https://doi.org/10.14279/depositonce-5718.5)  
 - **Link:** https://depositonce.tu-berlin.de/items/3b423df7-a764-4ce1-9065-4e6034bba759  
 - **Note:** Attribution is required when using this dataset.  
 - **Derived files (not part of the original database):** `FABIAN_CTF_measured_inverted_smoothed.mat` (CTF converted from SOFA, `utilities/convert_FABIAN_CTF_sofa2mat.m`) and `FABIAN_FF_equalization_measured_HATO_0.mat` (free-field equalization filters designed from the measured HRTFs, `utilities/generate_FABIAN_FF_equalization_mat.m`).  
