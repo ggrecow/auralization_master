@@ -71,18 +71,21 @@
 % Institution: Technische Universität Braunschweig
 %
 % Date created: 13.03.2025
-% Date last modified: 25.09.2026
+% Date last modified: 18.11.2026 (random number generator reset before the run)
 % MATLAB version: 2024b
+%
+%   AI disclosure (18.11.2026 change): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear; close all; clc;
 
 %% select example case
 
 % 'homogeneous' - homogeneous atmosphere
-atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
+% atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
 
 % 'sounding'    - atmosphere imported from atmospheric soundings
-% atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
+atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
 
 atmosphere = validatestring(atmosphere, {'homogeneous', 'sounding'});
 
@@ -110,6 +113,20 @@ tag = ['VR_approach_' atmosphere '_atmosphere'];
 
 % results folder
 results_path = [fullfile(script_folder, ['output_data_test_' atmosphere '_atmosphere']) filesep];
+
+%% random number generator (reproducible auralizations)
+% The sound synthesis draws random phases (tonal and broadband components) from MATLAB's
+% global random number generator. Resetting it here makes the run reproducible: running the
+% script again with the same inputs and settings gives bit-identical .wav files, e.g. to
+% compare two versions of the code or the effect of one setting. Without the reset, each run
+% gives another realization of the random phases (same spectra, but a different waveform, so
+% metrics can differ slightly). Notes:
+%  - receivers are processed one after another and share the generator, so the realization of
+%    a receiver depends on the receivers processed before it
+%  - the decorrelation filters of the coherence loss have their own seed (coherence_seed in
+%    the .ini file) and do not depend on this reset
+% Remove or change the line below to obtain other realizations (e.g. rng(2), rng('shuffle')).
+rng('default');
 
 %% run auralization (see POSSIBLE CALLS in the header for other options)
 

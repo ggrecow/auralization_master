@@ -1,6 +1,47 @@
-++ 14.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ 16.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
+
+- Doppler effect by variable delay lines (optional, .ini: doppler_method, DEFAULT input = previous behaviour)
+	- doppler_method = input: the sound emission predictions (e.g. PANAM) already contain the Doppler effect (as before;
+	  results unchanged)
+	- doppler_method = delay_line: the sound emission predictions do NOT contain the Doppler effect. The source signal is synthesized
+	  in emission time, and the Doppler effect is applied separately to the direct and ground-reflected sound paths by variable
+	  delay lines: each output sample at the reception time t_r reads the source signal at the emission time t_e with
+	  t_r = t_e + tau(t_e), tau = propagation time of the eigenray (ray tracing). Consequences:
+		- Doppler shift per path, consistent with the ray tracing (refraction, wind); before, one shift from the
+		  predictions (straight sound path) was used for both paths
+		- each time step of the predictions is placed at the time it reaches the receiver, i.e. at uneven intervals (closer together while
+		  the aircraft approaches, further apart while it moves away), so pitch and timing at the receiver both follow from
+		  the propagation times. With doppler_method = input, the steps are placed at constant intervals (timing of the
+		  source) and the Doppler shift of the frequencies comes from the predictions. The .wav files are slightly shorter or
+		  longer than with doppler_method = input
+		- relative delay between direct and reflected path applied continuously (sub-sample), not per block in integer samples
+		- propagation filters (spreading, absorption, ground reflection, HRTFs) act at the received frequencies
+	- the choice is a decision of the user and must match the sound emission predictions (for PANAM: a run with or without
+	  Doppler effect); it cannot be detected from the data. Predictions with Doppler effect + delay_line apply the Doppler
+	  effect twice
+	- convective amplification (.ini: convective_amplification, 0/1, DEFAULT 0, only used with delay_line): level change of
+	  -40*log10(D) per path, D = dt_r/dt_e = 1 - M*cos(theta) from the propagation times (M = 0.25: +5.0 dB approaching,
+	  -3.9 dB departing)
+	- delay line: band-limited fractional-delay interpolation (Blackman-windowed sinc, 32 taps; cut-off lowered to D*fs/2 when
+	  the signal is read faster than sampled, i.e. no aliasing on approach). Propagation times smoothed before differentiation
+	  (local cubic fit of tau^2 over 1 s; exact for straight flight at constant speed), so that eigenray inaccuracies do not
+	  cause pitch/level jitter
+	- FIR filters per path (<get_FIR>): propagation delay removed from the ART transfer functions, which are converted from the
+	  ART phase convention (delay = exp(+j*2*pi*f*tau)) to the MATLAB fft convention (conjugate); both paths centred with the
+	  same latency. The sum of both paths keeps the magnitude of the combined ART transfer function (checked)
+	- convolution blocks in reception time; each block uses the filter of the time step heard at its start
+	  (<overlapp_add_convolution>: new optional input irIndex)
+	- buzzsaw tones (<getTonalInput>) are not Doppler-shifted with delay_line
+	- log: Doppler factor range per path, convective gain, smoothing rms, emission vs reception duration, check of the FIR
+	  filter centring (warning if the direct-path peak is more than 2 samples off-centre); Doppler factor of the direct path
+	  from the propagation times compared with the straight-line estimate from the input data, 1 - M*cos(phix) (+ plot *_Doppler_factor.pdf)
+	- delay_line only for emission data (error otherwise); D <= 0 (supersonic towards the receiver) -> error
+	- new folder auralization/doppler: get_doppler_mapping, apply_doppler_delay_line, validate_doppler_delay_line
+	  (verification against analytical flyovers: level flight 300 m and 60 m, accelerating climbing departure, with and without
+	  noise on tau; fractional delay accuracy < 0.01 dB up to 0.35*fs; integer delay exact). New function
+	  auralization/private/get_doppler_method (reads and validates the .ini keys)
 
 - Turbulence-induced coherence loss between the direct and ground-reflected sound (optional, .ini: consider_coherence_loss)
 	- per time step, a coherence factor Ccoh(f) = exp(-w*f^2) is calculated from the atmospheric boundary layer
@@ -148,6 +189,8 @@ ROBUSTNESS AND USABILITY
   and README
 - head_orientation is validated (must be a number, error auralization:invalidHeadOrientation); read by the new
   function <get_head_orientation>, used by <get_FIR> and <MASTER_auralization_EngineAirframe>
+- doppler_method (input/delay_line) and convective_amplification (0/1) are validated before the rendering
+  (errors auralization:invalidDopplerMethod, auralization:invalidConvectiveAmplification)
 
 CHANGES IN RESULTS
 
@@ -156,6 +199,7 @@ CHANGES IN RESULTS
 - binaural results: change for fs ~= 44.1 kHz (resampling fix: spectral features and ITDs; and level, -0.74 dB at 48 kHz)
   and because the HRTF regularization is now off by default.
   The previous binaural results cannot be reproduced exactly, since they included the sampling frequency error
+- doppler_method = input (DEFAULT): results unchanged (checked: bit-identical output of <apply_propagation>, 16.11.2026)
 - binaural results, HRTF angles (14.11.2026):
 	- with refraction or wind (sounding atmospheres, wind profiles): arrival instead of launch direction
 	- homogeneous atmosphere without wind: direct path unchanged up to the eigenray accuracy (see the max. deviation
@@ -171,6 +215,7 @@ BREAKING CHANGES
 - run_auralization.m renamed to ex_run_auralization.m
 - relative <sounding_filepath> is interpreted relative to the .ini folder, not MATLAB's current folder
 - new folder auralization/hrtf_equalization must be on the path (added by startup_auralization.m)
+- new folder auralization/doppler must be on the path (added by startup_auralization.m)
 
 - DEFAULT values (.ini file)
 
@@ -181,6 +226,8 @@ BREAKING CHANGES
 	coherence_seed = 1, defined in get_propagation
 	turb_surface_temperature = ground temperature used for ray tracing, defined in get_propagation
 	turb_friction_velocity, turb_surface_heat_flux, turb_abl_height - no default, required if consider_coherence_loss = 1
+	doppler_method = input, defined in get_doppler_method
+	convective_amplification = 0, defined in get_doppler_method (only used with doppler_method = delay_line)
 
 ---------------------------------------------------------------------------------------------------------------------------------------
 

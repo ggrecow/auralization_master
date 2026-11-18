@@ -22,6 +22,23 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %      non-circular delay
 %   4) OUT.impulseResponse = centered direct IR (+ delayed reflected IR)
 %
+% With <doppler_method> = delay_line in the .ini file (see <get_doppler_method>), the
+% propagation time is applied to each sound path by a variable delay line before the
+% FIR filters (Doppler effect, see <apply_propagation>). The FIR filters must then NOT
+% contain the propagation delay, and steps 2) to 4) are replaced by:
+%   2') the propagation delay of each eigenray is removed from its transfer function,
+%       Hatm*exp(-j*2*pi*f*tau) (tau from <get_propagation>; ART defines the delay as
+%       exp(+j*2*pi*f*tau), see <AtmosphericPropagation>.PropagationDelayFilter), and the
+%       result is conjugated, which converts it to the MATLAB fft sign convention, in
+%       which a delay is exp(-j*2*pi*f*tau). The magnitude is unchanged; the conversion
+%       keeps the phase of the reflection factor consistent with the real (positive)
+%       delay of the reflected path applied by the delay line, so that the sum of both
+%       paths has the magnitude of the combined transfer function from ART
+%   3') the IR of each path is moved to the centre of the IR (fixed shift of N/2
+%       samples, the same for both paths), so both paths have the same latency
+%   4') OUT.impulseResponse_direct and OUT.impulseResponse_reflected, applied
+%       separately to the delayed signal of each path in <apply_propagation>
+%
 % If binaural signals are to be generated, measured HRTFs from the FABIAN database
 % (DOI: 10.14279/depositonce-5718.5) are used (zero-degree HATO only). The aircraft
 % trajectory is indirectly accounted for by the incidence angles of the direct and
@@ -106,6 +123,17 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %      provided, so that they can be plotted or analysed:
 %       OUT.HRIR_direct, OUT.HRIR_reflected
 %
+%      With <doppler_method> = delay_line, the filters of each path are given separately
+%      (without propagation delay, centred at sample N/2+1):
+%       OUT.impulseResponse_direct, OUT.impulseResponse_reflected [nSamples x nBlocks]
+%       OUT.impulseResponse_binaural_direct, OUT.impulseResponse_binaural_reflected
+%           (.leftEar, .rightEar), if binaural
+%       OUT.residualDelay_direct : [1 x nBlocks] position of the peak of the direct IR
+%           relative to the centre, in samples (check: close to 0 if the propagation
+%           delay was removed correctly)
+%      OUT.impulseResponse and OUT.impulseResponse_binaural (direct + reflected,
+%      without relative delay) are then only used for the plots.
+%
 %      If the turbulence-induced coherence loss is applied, the transfer functions
 %      (direct + reflected path, single-sided) without and with the decorrelation
 %      filters are also provided, for visualization (see <PLOT_coherence_loss_TF>):
@@ -126,10 +154,12 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   Resampled HRIRs scaled by fs_hrir/fs (frequency response preserved)
 % Gil Felix Greco, Braunschweig 14.11.2026 - description of <head_orientation> corrected
 %   (behaviour unchanged); <head_orientation> read and validated by <get_head_orientation>
+% Gil Felix Greco, Braunschweig 16.11.2026 - FIR filters per sound path without
+%   propagation delay for <doppler_method> = delay_line
 %
-%   AI disclosure (11.11.2026 and 14.11.2026 changes): Generative AI assistance (Anthropic
-%   Claude) was used to develop this code under the author's direction. All codes were
-%   verified by the author.
+%   AI disclosure (11.11.2026, 14.11.2026 and 16.11.2026 changes): Generative AI assistance
+%   (Anthropic Claude) was used to develop this code under the author's direction. All
+%   codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -179,6 +209,12 @@ end
 applyCoherenceLoss = considerGroundReflection == 1 ...
     && isfield( input, 'coherenceLoss' ) && input.coherenceLoss.consider == 1 ...
     && ~( isfield( input, 'flushMountedReceiver' ) && input.flushMountedReceiver );
+
+%% Doppler method (see <get_doppler_method>): with delay lines, the FIR filters of each
+% path are designed without the propagation delay
+
+doppler = get_doppler_method();
+useDelayLine = strcmp( doppler.method, 'delay_line' );
 
 %% Get atmospheric transfer function and their impulse responses
 % direct path
@@ -267,6 +303,39 @@ if considerGroundReflection == 1
 
 end
 
+if useDelayLine
+
+    %% FIR filters per path WITHOUT propagation delay (Doppler effect by delay lines)
+    % the delay of each eigenray is removed from its transfer function (ART convention:
+    % delay = exp(+j*2*pi*f*tau)) and the result is conjugated (MATLAB convention: delay =
+    % exp(-j*2*pi*f*tau)). The zero-delay IRs are moved to the centre (same shift for
+    % both paths, i.e. same latency). See the header.
+
+    freq = linspace( 0, fs/2, numFreqBins_single_sided ).';  % as in <get_propagation>
+    N = numFreqBins_double_sided;
+    centerShift = floor(N/2);                                % peak at sample N/2+1
+
+    tau_direct = input.propagation_time(:,1).';             % [1 x nTimeSteps]
+    hTOA_direct = circshift( il_ifft_double_sided( ...
+        conj( TF_direct .* exp( -1j*2*pi*freq*tau_direct ) ) ), centerShift );
+
+    % check: the direct IR must peak at the centre
+    [~, idxPeak] = max( abs( hTOA_direct ), [], 1 );
+    OUT.residualDelay_direct = idxPeak - (centerShift + 1);
+
+    if considerGroundReflection == 1
+        tau_reflected = input.propagation_time(:,2).';
+        if applyCoherenceLoss
+            TF_reflected_used = TF_reflected_decorrelated;
+        else
+            TF_reflected_used = TF_reflected;
+        end
+        hTOA_reflected = circshift( il_ifft_double_sided( ...
+            conj( TF_reflected_used .* exp( -1j*2*pi*freq*tau_reflected ) ) ), centerShift );
+    end
+
+else
+
 %% allign impulse responses of direct path and
 % keep relative time-delays of reflected paths from direct paths
 
@@ -302,6 +371,8 @@ if considerGroundReflection == 1
 
 else
 end
+
+end % if useDelayLine
 
 %% get HRTFs if binaural and apply them to atmospheric transfer functions (in freq domain)
 % to get impulseResponses_binaural containing the propagation effect + HRTFs
@@ -386,6 +457,22 @@ end
 
 %% get output variables
 
+if useDelayLine
+    % filters of each path, applied separately after the delay lines (<apply_propagation>)
+    OUT.impulseResponse_direct = hTOA_direct;
+    if binaural_signal == 1
+        OUT.impulseResponse_binaural_direct.leftEar  = impulseResponse_direct_binaural_leftEar;
+        OUT.impulseResponse_binaural_direct.rightEar = impulseResponse_direct_binaural_rightEar;
+    end
+    if considerGroundReflection == 1
+        OUT.impulseResponse_reflected = hTOA_reflected;
+        if binaural_signal == 1
+            OUT.impulseResponse_binaural_reflected.leftEar  = impulseResponse_reflected_binaural_leftEar;
+            OUT.impulseResponse_binaural_reflected.rightEar = impulseResponse_reflected_binaural_rightEar;
+        end
+    end
+end
+
 if considerGroundReflection == 1
 
     % OUT.impulseResponse = impulseResponse_combined ;
@@ -431,7 +518,24 @@ end
 
 tBlock = round(numTimeSteps/2); % a time bin to plot the freq response of the FIR filter
 
-if considerGroundReflection == 1
+if useDelayLine
+
+    % filters of each path (without propagation delay): magnitude compared with the
+    % transfer function of the same path
+    PLOT_FIR( OUT.impulseResponse_direct, TF_direct, tBlock, fs, [tag_auralization '_direct'] );
+    PLOT_FIR_spectrogram( OUT.impulseResponse_direct, TF_direct, fs, [tag_auralization '_direct'] );
+
+    if considerGroundReflection == 1
+        PLOT_FIR( OUT.impulseResponse_reflected, TF_reflected, tBlock, fs, [tag_auralization '_reflected'] );
+        PLOT_FIR_spectrogram( OUT.impulseResponse_reflected, TF_reflected, fs, [tag_auralization '_reflected'] );
+    end
+
+    if binaural_signal == 1
+        PLOT_FIR( OUT.impulseResponse_binaural_direct.leftEar, TF_direct, tBlock, fs, [tag_auralization '_direct_binaural_left'] );
+        PLOT_FIR_spectrogram( OUT.impulseResponse_binaural_direct.leftEar, TF_direct, fs, [tag_auralization '_direct_binaural_left'] );
+    end
+
+elseif considerGroundReflection == 1
 
     % plot FIR for a fixed (single) source/receiver combination
     PLOT_FIR( OUT.impulseResponse, TF_combined, 52, fs, [tag_auralization '_combined'] );
@@ -468,6 +572,13 @@ else
     end
 
 end
+
+%% inline function : il_ifft_double_sided(TF)
+
+    function IR_out = il_ifft_double_sided(TF_in)
+        % single-sided spectra [nBins x nTimes] -> real IRs [2*(nBins-1) x nTimes]
+        IR_out = ifft( [TF_in; conj(flipud(TF_in(2:end-1,:)))], 'symmetric' );
+    end % end of function <il_ifft_double_sided>
 
 %% inline function : il_resample_hrir(HRIR, fs, fs_hrir)
 

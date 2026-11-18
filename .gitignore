@@ -3,6 +3,7 @@
 *.pdf
 *.png
 input_data/results_auralization/*
+input_data/auralization_input_without_doppler.dat
 *.mat
 !third_party/FABIAN_HRTF_DATABASE_v4/*.mat
 output_data_test_*/

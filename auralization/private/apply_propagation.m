@@ -42,11 +42,40 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 %       outputSignal_binaural : [Ntime x 2] vector
 %       Auralized aircraft noise in the ground, in Pascal (stereo signal)
 %
+% DOPPLER EFFECT (<doppler_method> in the .ini file, see <get_doppler_method>):
+%
+%   input (DEFAULT) : the input signal already contains the Doppler effect (sound emission predictions).
+%       The FIR filters (both paths, with their relative delay) are applied block by
+%       block. The time steps of the predictions are placed at the receiver at constant intervals (dt),
+%       i.e. the timing at the receiver follows the timing of the source.
+%
+%   delay_line : the input signal is synthesized in emission time WITHOUT Doppler
+%       effect. For each sound path (direct, reflected):
+%       1) a variable delay line reads the signal at the emission time t_e that arrives
+%          at each reception time t_r = t_e + tau(t_e), with the propagation time tau of
+%          the eigenray (<get_doppler_mapping>, <apply_doppler_delay_line>). This gives
+%          the Doppler shift and the compression/stretching of the time axis, and the
+%          convective amplification if <convective_amplification> = 1 (DEFAULT 0)
+%       2) the FIR filters of the path (without propagation delay, see <get_FIR>) are
+%          applied block by block in reception time; each block uses the filter of the
+%          time step whose sound is heard at the start of the block
+%       3) both paths are summed. Their relative delay comes only from the delay lines.
+%       Each time step is thus placed at the time it reaches the receiver, i.e. at uneven
+%       intervals. The output starts at the first reception time common to both paths
+%       (shifted to zero), and its length differs from the input signal by the change of
+%       the propagation time over the flyover.
+%       With coherence loss, the decorrelation filters belong to the time steps (epochs
+%       of 0.1 s in emission time), so in reception time they change every 0.1*D s.
+%
 % Author: Gil Felix Greco, Braunschweig  11.03.2024
 % 28.03.2025, reformulated to process direct and reflected raypaths
 % individually generating a minimum phase FIR (direct path) and a linear phase FIR (reflected path).
 % 01.04.2025, included binaural rendering capabilities. The HRTFs are applied individually to the 
 % direct and reflected sound paths.
+% 16.11.2026, Doppler effect by variable delay lines (<doppler_method> = delay_line)
+%
+%   AI disclosure (16.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global fs % sampling frequency used for auralization, defined in the <auralization_master>
@@ -69,6 +98,31 @@ tic;
 
 %% get transform atmospheric transfer function as FIR filters
 % and head-related impulse responses (if required)
+
+%% Doppler effect by variable delay lines (optional, see header)
+% the mapping between emission and reception time of each path is computed from the
+% propagation times of the time steps of the input data, before they are split for the coherence loss
+
+doppler = get_doppler_method();
+useDelayLine = strcmp( doppler.method, 'delay_line' );
+
+if useDelayLine
+    nSteps = size( inputRayTracing.propagation_time, 1 );
+    t_e = (0:nSteps-1).' * dt_panam; % emission times of the time steps (see <getAuralizationTime>)
+
+    map_direct = get_doppler_mapping( t_e, inputRayTracing.propagation_time(:,1) );
+    t_start = map_direct.t_r(1);
+    t_end   = map_direct.t_r(end);
+
+    if considerGroundReflection == 1
+        map_reflected = get_doppler_mapping( t_e, inputRayTracing.propagation_time(:,2) );
+        t_start = max( t_start, map_reflected.t_r(1) );  % first reception time common to both paths
+        t_end   = min( t_end,   map_reflected.t_r(end) );
+    end
+
+    nOut  = floor( (t_end - t_start)*fs + 1e-6 ) + 1;
+    t_out = t_start + (0:nOut-1).' / fs;                 % reception times of the output samples
+end
 
 %% turbulence-induced coherence loss: decorrelation filters redrawn every 0.1 s
 % (Pieren & Lincke 2022), independent of dt_panam. Filters can only change at
@@ -119,10 +173,48 @@ FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, t
 % define synthesis block length [samples]
 BlockLen = round(fs*dt_block);
 
-outputSignal.outputSignal = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse, 'mono' );
+if useDelayLine
 
-if binaural_signal == 1
-    outputSignal.outputSignal_binaural = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
+    % direct path: delay line, then FIR filters in reception time
+    nBlocks = floor( nOut/BlockLen );
+    y_direct = apply_doppler_delay_line( inputSignal, fs, map_direct, t_out, doppler.convective_amplification );
+    idx_direct = il_block_index( map_direct, t_out(1), BlockLen, fs, dt_block, size(FIR.impulseResponse_direct,2), nBlocks );
+
+    outputSignal.outputSignal = overlapp_add_convolution( y_direct, BlockLen, FIR.impulseResponse_direct, 'mono', idx_direct );
+    if binaural_signal == 1
+        outputSignal.outputSignal_binaural = overlapp_add_convolution( y_direct, BlockLen, FIR.impulseResponse_binaural_direct, 'stereo', idx_direct );
+    end
+
+    % reflected path
+    if considerGroundReflection == 1
+        y_reflected = apply_doppler_delay_line( inputSignal, fs, map_reflected, t_out, doppler.convective_amplification );
+        idx_reflected = il_block_index( map_reflected, t_out(1), BlockLen, fs, dt_block, size(FIR.impulseResponse_reflected,2), nBlocks );
+
+        outputSignal.outputSignal = outputSignal.outputSignal + ...
+            overlapp_add_convolution( y_reflected, BlockLen, FIR.impulseResponse_reflected, 'mono', idx_reflected );
+        if binaural_signal == 1
+            outputSignal.outputSignal_binaural = outputSignal.outputSignal_binaural + ...
+                overlapp_add_convolution( y_reflected, BlockLen, FIR.impulseResponse_binaural_reflected, 'stereo', idx_reflected );
+        end
+    end
+
+    % information (printed once, for the overall signal)
+    if strcmp( tag_source, 'overallSignal' )
+        il_print_doppler_info( map_direct, t_out, numel(inputSignal), fs, doppler, FIR.residualDelay_direct );
+        if considerGroundReflection == 1
+            fprintf('  reflected path: Doppler factor D = %.3f ... %.3f, propagation-time smoothing rms = %.2g us\n', ...
+                min(map_reflected.D), max(map_reflected.D), 1e6*map_reflected.tau_smoothing_rms );
+        end
+    end
+
+else
+
+    outputSignal.outputSignal = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse, 'mono' );
+
+    if binaural_signal == 1
+        outputSignal.outputSignal_binaural = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
+    end
+
 end
 
 % %% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -182,6 +274,41 @@ end
 
 fprintf('\n- Applying propagation FIR filter/auralization time:\t%f sec\n', toc);
 
+end
+
+%% local function : il_block_index
+function idx = il_block_index(map, t0, BlockLen, fs, dt_block, nFilters, nBlocks)
+% Filter (column of the FIR matrix) used for each convolution block in reception time:
+% the time step whose sound is heard at the start of the block (emission time
+% t_e(t_r) at the block start), consistent with <doppler_method> = input, where block k
+% of the emission-time signal uses the filter of time step k.
+t_block = t0 + (0:nBlocks-1).' * BlockLen/fs;     % reception time at the block starts
+te_block = ppval( map.pp_te, t_block );            % emission time heard there
+idx = floor( te_block/dt_block + 1e-6 ) + 1;
+idx = min( max( idx, 1 ), nFilters );
+end
+
+%% local function : il_print_doppler_info
+function il_print_doppler_info(map, t_out, nIn, fs, doppler, residualDelay)
+fprintf('\n- Doppler effect by variable delay lines (doppler_method = delay_line):\n');
+fprintf('  direct path: Doppler factor D = %.3f ... %.3f (f_received = f_emitted/D), propagation-time smoothing rms = %.2g us\n', ...
+    min(map.D), max(map.D), 1e6*map.tau_smoothing_rms );
+if doppler.convective_amplification == 1
+    fprintf('  convective amplification ON: -40*log10(D) = %+.1f ... %+.1f dB\n', ...
+        -40*log10(max(map.D)), -40*log10(min(map.D)) );
+else
+    fprintf('  convective amplification OFF (convective_amplification = 0)\n');
+end
+fprintf('  duration: %.2f s emitted by the source -> %.2f s at the receiver (first arrival at %.3f s, set to zero)\n', ...
+    (nIn-1)/fs, (numel(t_out)-1)/fs, t_out(1) );
+maxResidual = max( abs( residualDelay ) );
+fprintf('  FIR filters: max. offset of the direct-path peak from the centre = %d sample(s)\n', maxResidual );
+if maxResidual > 2
+    warning( 'auralization:dopplerResidualDelay', ...
+        ['After removing the propagation delay, the direct-path IR peaks up to %d samples away ' ...
+         'from the centre. The propagation times and the phase of the transfer functions may not ' ...
+         'match; please check the results.'], maxResidual );
+end
 end
 
 %% local function : il_split_time_steps

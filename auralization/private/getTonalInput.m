@@ -21,9 +21,12 @@ switch source
         %
         %   1) fundamental freq and its <nHarmonics> are calculated based
         %       on the settings of the engine (i.e. N1 and number of
-        %       blades). Because this auralization framework works with
-        %       doppler-shifted EMISSION values, the doppler-effect is
-        %       considered in this process.
+        %       blades). With <doppler_method> = input (DEFAULT, see <get_doppler_method>),
+        %       the auralization works with doppler-shifted EMISSION values, so the
+        %       doppler-effect is considered in this process (straight-line formula with
+        %       the PANAM emission angle). With <doppler_method> = delay_line, the PANAM
+        %       data do not contain the Doppler effect and the tones are NOT shifted here;
+        %       the Doppler effect is applied later by the delay lines (<apply_propagation>).
         %
         %   2) The buzzsaw emission spectra provided by PANAM is used to obtain the SPL of 
         %        the tones calculated in step 1. The steps used for that are:
@@ -41,8 +44,18 @@ switch source
         %              by PANAM for that 1/3-OB is distributed equally to all tones  
         %
         % Gil Felix Greco, Braunschweig 18.04.2024
+        % Gil Felix Greco, Braunschweig 16.11.2026 - no Doppler shift of the buzzsaw tones
+        %   if <doppler_method> = delay_line (Doppler effect applied by delay lines)
+        %
+        %   AI disclosure (16.11.2026 changes): Generative AI assistance (Anthropic Claude)
+        %   was used to develop this code under the author's direction. All codes were
+        %   verified by the author.
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
+        % Doppler shift of the tones only if the PANAM data contain the Doppler effect
+        doppler = get_doppler_method();
+        shiftTones = strcmp( doppler.method, 'input' );
+
         % Max. n1 of the engine, in rotations per minute 
         maxRotationsPerMinute = str2double( input_file.max_rotations_per_minute );  
 
@@ -86,7 +99,11 @@ switch source
             % theta_doppler(i) = deg2rad ( sqrt( (input{i}.phix).^2 + (input{i}.phiy).^2 ) ) ;
             theta_doppler(i) = deg2rad ( input{i}.phix )  ;
 
-            doppler_factor(i) = 1 - ( input{i}.vel ./ input{i}.sound_speed ) .* cos ( theta_doppler(i) ) ;
+            if shiftTones
+                doppler_factor(i) = 1 - ( input{i}.vel ./ input{i}.sound_speed ) .* cos ( theta_doppler(i) ) ;
+            else
+                doppler_factor(i) = 1; % <doppler_method> = delay_line: Doppler effect applied later
+            end
 
             % %% law cosine approach with vectors (wrong!!! )%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -33,7 +33,14 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %       - turbulence-induced coherence loss between the direct and ground-reflected
 %         sound (optional, Ostashev et al. 2024 or Pieren & Lincke 2022 models)
 %
-%       Doppler effects need to be already included in the inputs provided by PANAM.
+%       The Doppler effect is either already included in the PANAM emission data
+%       (<doppler_method> = input, DEFAULT), or applied separately to the direct and
+%       ground-reflected sound paths by variable delay lines, driven by the
+%       propagation times of the eigenrays (<doppler_method> = delay_line; the PANAM
+%       emission data must then NOT contain the Doppler effect). With delay lines, each
+%       PANAM time step is placed at the time it reaches the receiver (uneven intervals),
+%       instead of at constant intervals, and the convective amplification can be added
+%       (<convective_amplification> = 1; DEFAULT 0).
 %
 %   4) the calculated atmospheric transfer functions for each pair of
 %       source/receiver positions are transformed into FIR filters and
@@ -67,8 +74,11 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %       them. Therefore, don't use an input file with MANY observer positions
 %       unless desired.
 %
-%     - Doppler effect needs to be already included in the EMISSION input data
-%       <auralization_input.dat>.
+%     - With <doppler_method> = input (DEFAULT), the Doppler effect needs to be already
+%       included in the EMISSION input data <auralization_input.dat>. With
+%       <doppler_method> = delay_line, it must NOT be included (it would be applied
+%       twice). The framework cannot check which kind of data is given: this is a
+%       decision of the user (see the example .ini files).
 %
 %     - The time step, dt, is taken from the PANAM input data. PANAM predictions
 %       with a time step of 0.1 s (or lower) are recommended, otherwise ground
@@ -159,7 +169,7 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 % Institution: Technische Universität Braunschweig
 %
 % Date created: 11.04.2024
-% Date last modified: 14.11.2026
+% Date last modified: 16.11.2026
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
