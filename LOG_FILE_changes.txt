@@ -16,12 +16,15 @@ ROBUSTNESS AND USABILITY
 
 - the error for a non-integer fs*dt (13.11.2026) was removed: dt is now always an integer number of samples
 - trim functions: the log prints dt and the actual duration of the trimmed data (before: 2*trim_time)
+- .ini files: description of smoothings_emission_based rewritten for users (behaviour unchanged)
 
 CHANGES IN RESULTS
 
-- correct playback speed (with the same trim_time, the files cover the intended part of the flight); SEL, LAE and EPNL
-  approx. +1 dB; smaller Doppler shift with delay_line. At 44.1 kHz with coherence loss, the decorrelation filters are
-  redrawn at the block boundary after each 0.1 s mark (warning)
+- correct playback speed (with the same trim_time, the files cover the intended part of the flight). Homogeneous example,
+  doppler_method = input: same file length, LAE +0.8 dB, LAFmax unchanged, pitch unchanged. delay_line (homogeneous
+  example): Doppler factor from the propagation times agrees with the estimate from the input data within 0.007
+  (before: approx. 0.05). At
+  44.1 kHz with coherence loss, the decorrelation filters are redrawn at the block boundary after each 0.1 s mark (warning)
 
 BREAKING CHANGES
 
