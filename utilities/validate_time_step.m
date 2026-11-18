@@ -64,9 +64,9 @@ for c = 1:size( cases, 1 )
         cases{c,1}, dt, info.nSamples, info.max_deviation, dt/2, info.consistent, il_ok( ok ) );
 end
 
-% 44.1 kHz: 0.125 s = 5512.5 samples -> 5513
+% 44.1 kHz: 0.125 s = 5512.5 samples -> 5510 (multiple of 10 samples)
 [~, info] = get_time_step( q( k*dt0 + dt0 ), 44100, 'validate_time_step' );
-ok = info.nSamples == 5513 && info.consistent;
+ok = info.nSamples == 5510 && info.consistent;
 nFail = nFail + ~ok;
 fprintf('  %-36s dt = %.6f s (%5d samples)  -> %s\n', 'rounded to 0.1 s, fs = 44.1 kHz', info.dt, info.nSamples, il_ok( ok ) );
 

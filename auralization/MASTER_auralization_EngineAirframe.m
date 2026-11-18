@@ -124,7 +124,7 @@ end
 il_check_sampling_frequency( fs, binaural_signal );
 
 % time step of the input data (constant; sound source time). Estimated from the time values of
-% all time steps and rounded to an integer number of samples, with a check that the time values
+% all time steps and rounded to a multiple of 10 samples (see <get_time_step>), with a check that the time values
 % fit a uniform grid (warning otherwise), see <get_time_step>. The time values can be rounded
 % (PANAM: 0.1 s resolution with a time step of e.g. 0.125 s), so the first difference is not used.
 global dt_panam
@@ -401,7 +401,7 @@ K = info.K;
 fprintf(['\n- Time step of the input data: dt = %.6f s (%d samples at %g Hz), from all %d time ' ...
          'values (uniform grid closest to all values)\n'], info.dt, info.nSamples, info.fs, K );
 if abs( info.dt - info.dt_fit ) > 1e-9
-    fprintf('  dt rounded to an integer number of samples (from %.7f s)\n', info.dt_fit );
+    fprintf('  dt rounded to a multiple of %d samples (from %.7f s)\n', info.nMultiple, info.dt_fit );
 end
 fprintf(['  time values in the input data: first difference %.4f s, differences %.4f ... %.4f s; ' ...
          'max. deviation from the uniform grid %.4f s (limit dt/2 = %.4f s)\n'], ...
@@ -438,8 +438,8 @@ function il_check_sampling_frequency( fs, binaural_signal )
 % Checks <sampling_freq> from the .ini file:
 %   - fs >= 44.1 kHz (error otherwise): the HRIRs (FABIAN, 44.1 kHz) and the
 %     synthesis would lose high-frequency content, which biases the metrics
-%   - (fs*dt is always an integer number of samples: dt is rounded to an integer
-%     number of samples in <get_time_step>)
+%   - (fs*dt is always a multiple of 10 samples, as needed by the broadband synthesis:
+%     dt is rounded in <get_time_step>)
 %   - note if fs > 48 kHz: no benefit (binaural content ends at 22.05 kHz and air
 %     absorption removes the rest), only longer computation
 %   - note if binaural and fs ~= 44.1 kHz: HRIRs are resampled, so the binaural

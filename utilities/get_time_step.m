@@ -1,5 +1,5 @@
-function [dt, info] = get_time_step( time, fs, caller )
-% function [dt, info] = get_time_step( time, fs, caller )
+function [dt, info] = get_time_step( time, fs, caller, nMultiple )
+% function [dt, info] = get_time_step( time, fs, caller, nMultiple )
 %
 % Time step (dt) of the sound emission predictions (e.g. PANAM), estimated from the time values
 % of ALL time steps, and check that the time values fit a uniform time grid.
@@ -17,9 +17,15 @@ function [dt, info] = get_time_step( time, fs, caller )
 %      time values, and in practice much less, as the rounding errors of all values constrain
 %      the fit (example PANAM data, q = 0.1 s: dt = 0.125 s exactly for the full record and for
 %      every part of it with 12 or more time steps).
-%   2) dt is rounded to an integer number of samples, dt = round(fs*dt)/fs, so that the block
-%      length fs*dt is an integer (e.g. 0.125 s -> 6000 samples at 48 kHz; at 44.1 kHz,
-%      5512.5 -> 5513 samples, i.e. dt = 0.12501 s, 0.01 % slower).
+%   2) dt is rounded so that the block length fs*dt is an integer MULTIPLE OF <nMultiple> samples
+%      (DEFAULT 10), dt = nMultiple*round(fs*dt/nMultiple)/fs. The broadband synthesis
+%      (<broadbandSynthesis_smooth>) splits each block into 5 hops (HopSizeFactor = 5) and needs
+%      an even block length for its one-sided spectrum, so the block length must be a multiple
+%      of 10 samples. An integer number of samples alone is not enough: e.g. 4802 samples
+%      (dt = 0.100042 s at 48 kHz) gives a hop size of 960.4 samples and the synthesis fails.
+%      Examples: 0.125 s -> 6000 samples at 48 kHz; 0.1000337 s -> 4800 samples (dt = 0.1 s,
+%      0.03 % faster); at 44.1 kHz, 0.125 s = 5512.5 -> 5510 samples, i.e. dt = 0.124943 s
+%      (0.05 % faster).
 %   3) Consistency check: every time value must lie within dt/2 of the uniform grid (offset t0
 %      fitted, not taken from the first value). Then each time step of the input data falls into
 %      its own block (none skipped or doubled). If the check fails (e.g. missing time steps,
@@ -45,14 +51,20 @@ function [dt, info] = get_time_step( time, fs, caller )
 %   caller : string (optional)
 %   name of the calling function, used in the warning
 %
+%   nMultiple : positive integer (optional)
+%   the block length fs*dt is rounded to a multiple of nMultiple samples. DEFAULT: 10, required
+%   by <broadbandSynthesis_smooth> (HopSizeFactor = 5, even block length). Use 1 only if the
+%   broadband synthesis is not used.
+%
 % OUTPUTS:
 %   dt : scalar
-%   time step [s], an integer number of samples at fs
+%   time step [s], an integer multiple of nMultiple samples at fs
 %
 %   info : struct
 %   info.dt            : dt [s] (same as output dt)
 %   info.dt_fit        : dt before rounding to an integer number of samples [s]
-%   info.nSamples      : block length fs*dt [samples]
+%   info.nSamples      : block length fs*dt [samples], a multiple of info.nMultiple
+%   info.nMultiple     : nMultiple used [samples]
 %   info.fs            : sampling frequency used [Hz]
 %   info.K             : number of time values
 %   info.dt_first      : first difference of the time values, time(2)-time(1) [s] (for comparison)
@@ -73,6 +85,14 @@ global input_file
 
 if nargin < 3 || isempty( caller )
     caller = 'get_time_step';
+end
+
+if nargin < 4 || isempty( nMultiple )
+    nMultiple = 10; % block length must be a multiple of 2*HopSizeFactor (see <broadbandSynthesis_smooth>)
+end
+
+if ~isscalar( nMultiple ) || nMultiple < 1 || nMultiple ~= round( nMultiple )
+    error( 'auralization:timeStep', '%s: nMultiple must be a positive integer.', caller );
 end
 
 if nargin < 2 || isempty( fs )
@@ -133,14 +153,14 @@ for iter = 1:200
 end
 dt_fit = ( lo + hi )/2;
 
-%% 2) integer number of samples
+%% 2) integer multiple of nMultiple samples
 
-% (fs*dt is first rounded to 1e-6 samples, so that a value of exactly x.5 samples, e.g. 0.125 s at
-% 44.1 kHz, is always rounded up, independent of floating-point errors of the fit)
-nSamples = round( round( fs*dt_fit*1e6 )/1e6 );
-if nSamples < 1
+% (fs*dt/nMultiple is first rounded to 1e-6, so that a value of exactly x.5 is always rounded up,
+% independent of floating-point errors of the fit)
+nSamples = nMultiple*round( round( fs*dt_fit/nMultiple*1e6 )/1e6 );
+if nSamples < nMultiple
     error( 'auralization:timeStep', ...
-        '%s: the time step dt = %g s is shorter than one sample at fs = %g Hz.', caller, dt_fit, fs );
+        '%s: the time step dt = %g s is shorter than %d samples at fs = %g Hz.', caller, dt_fit, nMultiple, fs );
 end
 dt = nSamples/fs;
 
@@ -166,6 +186,7 @@ end
 info.dt            = dt;
 info.dt_fit        = dt_fit;
 info.nSamples      = nSamples;
+info.nMultiple     = nMultiple;
 info.fs            = fs;
 info.K             = K;
 info.dt_first      = d(1);

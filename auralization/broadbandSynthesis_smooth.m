@@ -67,6 +67,13 @@ OvlpCorr = 1;
 BlockLen = round(fs*dt_panam);               % define synthesis block length [samples]
 HopSizeFactor = 5;
 HopSize = BlockLen/HopSizeFactor;         % synthesis hop size [samples]
+if mod( BlockLen, 2*HopSizeFactor ) ~= 0
+    % the hop size must be an integer and the block length even (one-sided spectrum below)
+    error( 'auralization:blockLength', ...
+        ['broadbandSynthesis_smooth: the block length fs*dt = %d samples (dt = %.6f s) must be a ' ...
+         'multiple of %d samples (even, and divisible by HopSizeFactor = %d). dt is set in ' ...
+         '<get_time_step> (nMultiple).'], BlockLen, dt_panam, 2*HopSizeFactor, HopSizeFactor );
+end
 nBlocks = floor(fs*time(end)/HopSize);      % number of synthesis blocks (round down)
 % nBlocks = size(input,1); % number of time blocks from PANAM (should be the same as above) 
 
