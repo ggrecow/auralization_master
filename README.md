@@ -58,6 +58,14 @@ Following Pieren & Lincke [9], this can optionally be included by filtering the 
 
 Example for the homogeneous-atmosphere case in [input_data](input_data/example_homogeneous_atmosphere/) (sunny summer afternoon with moderate wind and strong convection). **Left:** transfer functions with and without coherence loss at the closest point to the receiver, where both paths nearly coincide and remain fully coherent, and at the time step with the strongest coherence loss, where the dips are partly filled in. **Right:** level difference between both over time and frequency (red: dips filled in, blue: peaks lowered).
 
+### Turbulence-induced amplitude fluctuations (optional, experimental)
+
+Turbulence also scatters the sound on its way down, so the received level fluctuates randomly by a few dB, typically at modulation rates of about 0.5–1 Hz. These fluctuations are clearly audible in recordings of aircraft flyovers on warm, sunny days, and are seen as vertical stripes in spectrograms. They grow with frequency and with the propagation distance inside the atmospheric boundary layer, and are much weaker in the morning and evening.
+
+Following Lincke & Pieren [11], the standard deviation of the level fluctuations is calculated per time step and 1/3-octave band with their semi-empirical model. It extends the weak-scattering theory of Ostashev & Wilson by an empirical saturation term, fitted to more than 5000 flyovers at Zurich airport, and by an effective propagation distance for aircraft flying above the boundary layer. The inputs are the same boundary-layer parameters as for the coherence loss, so that both effects follow from one turbulence description. The fluctuations are applied to the receiver signal (mono and binaural) as a smooth, time-variant gain driven by one random process for all frequencies (first-order 0.5 Hz low-pass, as in [12]), independent of the propagation filters and of the Doppler method. The gain is energy-neutral on average. Because the same fluctuation acts on the direct and on the ground-reflected sound, it does not change the coherence between both paths, which is described by the coherence loss alone. Enable it with `consider_amplitude_fluctuations = 1` (DEFAULT 0).
+
+This feature is experimental, since some details of [11] are not fully specified. The implementation reproduces the model curves published in [12] for high turbulence within about 0.1–0.2 dB; the fluctuations saturate at about 3.5 dB, within the 1–4 dB measured in [11]. For aircraft flying above a shallow boundary layer, [11] and [12] disagree, and the effective propagation distance of [11] is used. See `validate_log_amplitude_model.m`.
+
 ## 1.4 Receiver model
 
 The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database [7]. 
@@ -90,7 +98,7 @@ Metrics already contain the outer ear of their reference sound field (explicitly
 
 To allow for comparison between different cases, first the input aircraft trajectory is trimmed to a desired auralization time around the point on which the aircraft slanted distance from the observer is minimum. Note that, depending on the aircraft trajectory, this is point is not the same as the aircraft overhead position. Thereby, the synthesized signal of the aircraft noise emissions (including the Doppler effect in the original version; see the Doppler effect section below for the extended version) is combined with the transfer functions of the direct and reflected sound paths for each source and receiver pairs considered within the discrete aircraft trajectory to obtain the auralized sound pressure signal at the receiver. This is achieved using the overlap-add method [8] to perform a DFT-based block convolution. 
 
-This process is performed separately for the direct and reflected sound paths. The same sound source signal is used for the direct and reflected ray paths, which differ only by their atmospheric transfer functions (and, if coherence loss is considered, by the decorrelation filter applied to the reflected path). The resulting signals are then summed to yield a **monoaural diotic** auralized sound pressure signal at the receiver. In this case, receiver model = omnidirection microphone. 
+This process is performed separately for the direct and reflected sound paths. The same sound source signal is used for the direct and reflected ray paths, which differ only by their atmospheric transfer functions (and, if coherence loss is considered, by the decorrelation filter applied to the reflected path). The resulting signals are then summed (and, if amplitude fluctuations are considered, modulated by the same random level fluctuations) to yield a **monoaural diotic** auralized sound pressure signal at the receiver. In this case, receiver model = omnidirection microphone. 
 
 If **binaural rendering** is considered, the resulting sound signals for the direct and reflected sound paths are individually convoluted with HRTFs (left and right ears) obtained based on sound incidence angles calculated during the ART simulation. The resulting stereo signals of the direct and reflected sound paths are summed to obtain the auralized sound pressure signals at the receiver for the left and right ears. 
 
@@ -125,6 +133,10 @@ In the original version of the framework (v1.0), the Doppler effect is included 
 
 [10] V. E. Ostashev, D. J. Breton, and D. K. Wilson, Interference of the direct and ground-reflected waves in the atmosphere with volumetric scattering, J. Acoust. Soc. Am., vol. 156, no. 1, pp. 107–118, 2024. DOI: [10.1121/10.0026452](https://doi.org/10.1121/10.0026452)
 
+[11] D. Lincke and R. Pieren, Auralization of atmospheric turbulence-induced amplitude fluctuations in aircraft flyover sound based on a semi-empirical model, Acta Acustica, vol. 8, p. 47, 2024. DOI: [10.1051/aacus/2024036](https://doi.org/10.1051/aacus/2024036)
+
+[12] D. Lincke, C. Kawai, and R. Pieren, Atmospheric turbulence affects noise annoyance from aircraft flyovers, Acta Acustica, vol. 9, p. 69, 2025. DOI: [10.1051/aacus/2025053](https://doi.org/10.1051/aacus/2025053)
+
 # 2. Framework architecture / Algorithmic overview
 
 A high-level description of the code structure and input data is provided here.
@@ -152,11 +164,13 @@ Exemplary input data is provided in the [input_data](input_data/) folder. The tw
          - `broadbandSynthesis_smooth()` : functions to convert 1/3-octave band spectrogram into narrowband noise, then get signals using granular synthesis
          - `get_propagation()` : main function resposible to setup and perform sound propagation simulations using the ART software, output atmospheric transfer functions
             - `get_coherence_factor_slanted()` / `get_coherence_factor_homogeneous()` : coherence factor between direct and reflected paths (if coherence loss is considered), using the turbulence parameters from `get_abl_turbulence()`
+            - `get_log_amplitude_fluctuation()` : standard deviation of the turbulence-induced level fluctuations per 1/3-octave band (if amplitude fluctuations are considered), using the same turbulence parameters
          - `apply_propagation()` : main function used to apply sound propagation effects on synthesized sound signals of aircraft (emissions + Doppler effect)
             - `get_doppler_mapping()` / `apply_doppler_delay_line()` : Doppler effect (and convective amplification) per sound path by variable delay lines (only if `doppler_method = delay_line`)
             - `get_FIR()` : get **Finite Impulse Response (FIR)** filters associated with atmospheric transfer functions and HRTFs (if required)
                - `get_decorrelation_filter()` : random-phase decorrelation filters for the reflected path (if coherence loss is considered)
             - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
+            - `apply_amplitude_fluctuations()` : random level fluctuations on the receiver signal (STFT-domain time-variant gain driven by `get_amplitude_modulation()`; if amplitude fluctuations are considered)
          - `save_wav()` : export .WAV files for a desired full-scale 
          - `convert_binaural_equalization()` : DF and FF equalized versions of the binaural signal (if `generate_equalized_binaural = 1`), using the filters of `get_hrtf_equalization_filter()` (`DF`: inverted FABIAN CTF; `FF`: inverted frontal HRTF, precomputed with `get_hrtf_ff_equalization()`); can also be used on finished binaural files
 <!-- >   
@@ -177,7 +191,7 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
    
-3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss, Doppler method) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
+3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss, amplitude fluctuations, Doppler method) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
      
 <!-- >  Installation instructions (dependencies, setup).
 

@@ -89,6 +89,13 @@
 %       designing separete FIR filters later on while considering the
 %       relative time difference between eigenrays
 %
+%       amplitudeFluctuations : struct (turbulence-induced amplitude fluctuations)
+%       .consider : 0/1 (.ini: consider_amplitude_fluctuations)
+%       .f        : [1 x nF] 1/3-octave band centre frequencies [Hz]
+%       .sigma    : [nTimeSteps x nF] standard deviation of the level fluctuations [dB]
+%       .flim     : [nTimeSteps x 1] limit frequency between weak and strong scattering [Hz]
+%       .seed     : seed of the random fluctuations (.ini: amplitude_fluctuation_seed)
+%
 % Author: Gil Felix Greco, Braunschweig 08.12.2023
 % Author: Gil Felix Greco, Braunschweig 04.03.2025 - included plots of angles in
 % spherical coordinates (those are already converted to be used for HRTFs
@@ -101,6 +108,13 @@
 % smoothed. Fixes the reflected-path branch that tested the direct ray (eigenrays(i,1).phi)
 %
 %   AI disclosure (14.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
+% Author: Gil Felix Greco, Braunschweig 18.11.2026 - optional turbulence-induced amplitude
+% fluctuations: std of the level fluctuations per time step and 1/3-octave band
+% (OUT.amplitudeFluctuations, see <get_log_amplitude_fluctuation>); the ABL parameters are
+% read once and shared with the coherence loss
+%
+%   AI disclosure (18.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
 %   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -422,13 +436,25 @@ if coherenceLoss.consider == 1 && flushMountedReceiver
     coherenceLoss.consider = 0;
 end
 
-if coherenceLoss.consider == 1
+amplitudeFluctuations.consider = 0;
+if isfield( input_file, 'consider_amplitude_fluctuations' )
+    amplitudeFluctuations.consider = str2double( input_file.consider_amplitude_fluctuations );
+    if ~( amplitudeFluctuations.consider == 0 || amplitudeFluctuations.consider == 1 )
+        error( 'auralization:invalidAmplitudeFluctuations', ...
+            '<consider_amplitude_fluctuations> in the .ini file must be 0 or 1 (got %s).', ...
+            input_file.consider_amplitude_fluctuations );
+    end
+end
+
+% atmospheric boundary layer (ABL) parameters, shared by coherence loss and
+% amplitude fluctuations, so that both use the same turbulence description
+if coherenceLoss.consider == 1 || amplitudeFluctuations.consider == 1
 
     required = {'turb_friction_velocity', 'turb_surface_heat_flux', 'turb_abl_height'};
     for k = 1:numel(required)
         if ~isfield( input_file, required{k} )
-            error( 'auralization:coherenceLossInput', ...
-                '<consider_coherence_loss> = 1 requires <%s> in the input file.', required{k} );
+            error( 'auralization:turbulenceInput', ...
+                '<consider_coherence_loss> = 1 or <consider_amplitude_fluctuations> = 1 requires <%s> in the input file.', required{k} );
         end
     end
 
@@ -440,6 +466,9 @@ if coherenceLoss.consider == 1
     else
         atm_turb.Ts = temperatureCelsius + 273.15; % ground temperature used for ray tracing [K]
     end
+end
+
+if coherenceLoss.consider == 1
 
     coherenceLoss.model = 'slanted';
     if isfield( input_file, 'coherence_model' )
@@ -475,6 +504,41 @@ if isfield( input_file, 'coherence_seed' )
     coherenceLoss.seed = str2double( input_file.coherence_seed );
 end
 
+%% Turbulence-induced amplitude fluctuations (optional)
+% Per time step, the standard deviation sigma(f) of the level fluctuations is
+% calculated with the semi-empirical model of Lincke & Pieren (2024), see
+% <get_log_amplitude_fluctuation>, on 1/3-octave band centre frequencies.
+% Straight-ray geometry, as for the coherence loss. The fluctuations themselves
+% are applied to the receiver signal in <apply_propagation> (see
+% <apply_amplitude_fluctuations>). Also applied for flush-mounted receivers
+% (they affect the direct path as well).
+
+amplitudeFluctuations.f     = 10.^( (13:43)/10 );           % 1/3-octave band centres, 20 Hz - 20 kHz (base 10)
+amplitudeFluctuations.sigma = zeros( size(source,1), numel(amplitudeFluctuations.f) );
+amplitudeFluctuations.flim  = nan( size(source,1), 1 );
+
+if amplitudeFluctuations.consider == 1
+
+    hr = max( receiver(1,3), 0 );
+    for i = 1:size(source,1)
+        hs = source(i,3);
+        R1 = norm( source(i,:) - receiver(1,:) );            % direct path length [m]
+        [amplitudeFluctuations.sigma(i,:), out_af] = ...
+            get_log_amplitude_fluctuation( hs, hr, R1, atm_turb, amplitudeFluctuations.f );
+        amplitudeFluctuations.flim(i) = out_af.flim;
+    end
+
+    amplitudeFluctuations.atm = atm_turb;
+    i1k = find( amplitudeFluctuations.f >= 1e3, 1, 'first' );
+    fprintf('\n- Amplitude fluctuations (Lincke & Pieren 2024): std of the level fluctuations at 1 kHz = %.1f ... %.1f dB\n', ...
+        min( amplitudeFluctuations.sigma(:,i1k) ), max( amplitudeFluctuations.sigma(:,i1k) ) );
+end
+
+amplitudeFluctuations.seed = 1;
+if isfield( input_file, 'amplitude_fluctuation_seed' )
+    amplitudeFluctuations.seed = str2double( input_file.amplitude_fluctuation_seed );
+end
+
 %% assign outputs
 
 % get spherical angles for output - angles already converted to the
@@ -495,6 +559,7 @@ OUT.TF = TF;
 OUT.nfft = nfft;
 OUT.flushMountedReceiver = flushMountedReceiver;
 OUT.coherenceLoss = coherenceLoss;
+OUT.amplitudeFluctuations = amplitudeFluctuations;
 
 clear idx_reflection hypotenuse;
 

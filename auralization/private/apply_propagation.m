@@ -76,6 +76,11 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 %
 %   AI disclosure (16.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
 %   to develop this code under the author's direction. All codes were verified by the author.
+% 18.11.2026, optional turbulence-induced amplitude fluctuations applied to the receiver
+% signal (mono and binaural), see <apply_amplitude_fluctuations>
+%
+%   AI disclosure (18.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global fs % sampling frequency used for auralization, defined in the <auralization_master>
@@ -215,6 +220,45 @@ else
         outputSignal.outputSignal_binaural = overlapp_add_convolution( inputSignal, BlockLen, FIR.impulseResponse_binaural, 'stereo' );
     end
 
+end
+
+%% turbulence-induced amplitude fluctuations (optional), see <get_propagation>
+% Applied to the receiver signal, i.e. to the sum of the direct and (decorrelated)
+% ground-reflected sound, with one random process for all frequencies and both ears
+% (<apply_amplitude_fluctuations>). The same seed is used for the engine, airframe and
+% overall signals, so that their fluctuations are identical. The DF/FF equalized binaural
+% signals are derived from the binaural signal afterwards and contain the same fluctuations.
+% Time of each row of sigma at the receiver (middle of each time step, plus the latency of
+% the centred FIR filters):
+%   input      : constant intervals dt
+%   delay_line : arrival time of the direct path, t_e + tau, relative to the output start
+
+if isfield( inputRayTracing, 'amplitudeFluctuations' ) && inputRayTracing.amplitudeFluctuations.consider == 1
+
+    AF      = inputRayTracing.amplitudeFluctuations;
+    latency = floor( size( FIR.impulseResponse, 1 )/2 ) / fs;    % IR peak at sample N/2+1
+    t_mid   = ( (0:size(AF.sigma,1)-1).' + 0.5 ) * dt_panam;     % middle of each time step (emission)
+    if useDelayLine
+        t_ctrl = interp1( map_direct.t_e, map_direct.t_r, t_mid, 'linear', 'extrap' ) - t_out(1) + latency;
+    else
+        t_ctrl = t_mid + latency;
+    end
+    optsAF = struct( 'seed', AF.seed );
+
+    outputSignal.outputSignal = apply_amplitude_fluctuations( outputSignal.outputSignal, fs, ...
+        t_ctrl, AF.f, AF.sigma, optsAF );
+
+    if binaural_signal == 1
+        outputSignal.outputSignal_binaural = apply_amplitude_fluctuations( outputSignal.outputSignal_binaural, fs, ...
+            t_ctrl, AF.f, AF.sigma, optsAF );
+    end
+
+    if strcmp( tag_source, 'overallSignal' )
+        fprintf('\n- Amplitude fluctuations applied to the receiver signal(s) (amplitude_fluctuation_seed = %d)\n', AF.seed);
+        if show == true
+            PLOT_amplitude_fluctuations( AF, t_ctrl, tag_auralization );
+        end
+    end
 end
 
 % %% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

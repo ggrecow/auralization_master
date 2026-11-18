@@ -127,7 +127,7 @@ results_path = [fullfile(script_folder, ['output_data_test_' atmosphere '_atmosp
 %    the .ini file) and do not depend on this reset
 % Remove or change the line below to obtain other realizations (e.g. rng(2), rng('shuffle')).
 
-% rng('default');
+rng('default');
 
 %% run auralization (see POSSIBLE CALLS in the header for other options)
  
