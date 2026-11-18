@@ -17,6 +17,12 @@ function [idx_lower, idx_upper] = trim_data_TimeDistanceBased(input, TrimTime, i
 % TrimTime - time span to trim the data before and after the max spl
 %
 % Gil Felix Greco - Braunschweig 21.09.2023
+% Gil Felix Greco - Braunschweig 18.11.2026 - time step estimated from all time steps
+%   (<get_time_step>) instead of the first difference of the (rounded) time values; the log
+%   prints the time step and the duration of the trimmed data
+%
+%   AI disclosure (18.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global save_mat_fig
@@ -27,8 +33,12 @@ for i = 1:size(input,1)
     time(i) = input{i}.source_time; % get time vector; obs: based on the source time, change if for some reason you need receiver time
     dist(i) = input{i}.dist;
 end
- 
- dt = time(2) - time(1); % get dt from time vector. Assumes a constant dt
+
+% time step of the input data (constant), estimated from the time values of all time steps, as in
+% <MASTER_auralization_EngineAirframe> (see <get_time_step>; fs from the .ini file). The time values
+% can be rounded (PANAM: 0.1 s resolution with a time step of e.g. 0.125 s), so the first
+% difference is not used
+[dt, info_dt] = get_time_step( time, [], 'trim_data_TimeDistanceBased' );
 TrimTimebins = TrimTime/dt; % number of bins required to have <TrimTime>
 
 [max_SPL,idx_max] = max(SPL_vs_time); % find idx of max value
@@ -55,7 +65,8 @@ if idx_lower < 1 || idx_upper > length(time) % if TrimTime is larger than the in
     fprintf( '\n- Desired time before/after max. SPL: %.4g (s)', TrimTime ) ;
     fprintf( '\n- WARNING: desired trim is larger than signal''s time length.' );
     fprintf( '\n- WARNING: Original signal''s length will be maintained!!!' );
-    fprintf( '\n- The auralised signal will be %.4g (s) long', (dt*length(time)) - dt ) ;
+    fprintf( '\n- Time step of the input data: dt = %.4f s (first difference of the time values: %.4f s)', dt, info_dt.dt_first ) ;
+    fprintf( '\n- The auralised signal will be %.4g (s) long (%d time steps)', (dt*length(time)) - dt, length(time) ) ;
     fprintf( '\n*--------------------------------------------------------------------------*\n' );
     
     %%% PLOT SPL vs time
@@ -166,7 +177,8 @@ else % trim is possible
     fprintf( '\n- SPL on min. distance point: %.4g dB SPL', SPL_vs_time(idx_min_dist) ) ;
     fprintf( '\n- Max. SPL on the data: %.4g dB SPL', max(SPL_vs_time) ) ;
     fprintf( '\n- Desired time before/after max. SPL: %.4g (s)', TrimTime ) ;
-    fprintf( '\n- The auralised signal will be %.4g (s) long', 2*TrimTime ) ;
+    fprintf( '\n- Time step of the input data: dt = %.4f s (first difference of the time values: %.4f s)', dt, info_dt.dt_first ) ;
+    fprintf( '\n- The auralised signal will be %.4g (s) long (%d time steps)', (idx_upper - idx_lower)*dt, idx_upper - idx_lower + 1 ) ;
     fprintf( '\n*--------------------------------------------------------------------------*\n\n' );
     
     %%% PLOT SPL vs time
@@ -190,7 +202,7 @@ else % trim is possible
 
     legend('PANAM input data',...
         'Point of min. distance between source/receiver',...
-        sprintf('Total auralization time is %.4g s', 2*TrimTime ),...
+        sprintf('Total auralization time is %.4g s', (idx_upper - idx_lower)*dt ),...
         'Location','northoutside');
 
     xlabel(xtag,'Interpreter','Latex');

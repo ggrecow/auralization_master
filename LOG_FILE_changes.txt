@@ -1,4 +1,4 @@
-++ 16.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ 18.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
 
 NEW FEATURES
 
@@ -119,6 +119,41 @@ NEW FEATURES
 
 BUG FIXES
 
+- Time step of the input data (dt): taken from the time values of ALL time steps, no longer from the first difference
+  (new function utilities/get_time_step, used in <MASTER_auralization_EngineAirframe>, <trim_data_TimeDistanceBased> and
+  <trim_data_TimeBased>). PANAM writes the source time with a resolution of 0.1 s, while its time step can be different
+  (example data: 0.125 s, so the differences of the time values are 0.1 or 0.2 s). Before, dt = time(2) - time(1) =
+  0.1 s, i.e. a rounding artefact (a file starting with a 0.2 s difference would have given dt = 0.2 s). Consequences
+  of the old dt (example data):
+	- each time step was rendered as 0.1 s instead of 0.125 s: the flyover played 1.25x too fast (time history
+	  compressed to 80 %); trim_time = 10 covered 25 s of flight instead of 20 s; SEL approx. 1 dB too low
+	  (10*log10(0.8)), duration-based metrics (e.g. EPNL) affected. With doppler_method = input, the pitch was right
+	  (it comes from the predictions)
+	- doppler_method = delay_line: D = 1 + dtau/dt with dt = 0.1 s, i.e. a Doppler shift approx. 25 % too strong
+	  (homogeneous example: D = 0.750 ... 1.249 instead of 0.800 ... 1.200)
+  Now:
+	- dt = step of the uniform grid t0 + (k-1)*dt closest to all time values (smallest maximum deviation). Rounding
+	  errors do not accumulate (example data: dt = 0.125 s exactly, for the full record and for every part of it with
+	  12 or more time steps). Confirmed by two independent quantities of the data: distance per step / vel = 0.12500 s,
+	  (retarded time - dist/c) per step = 0.12500 s; the rounding of k*0.125 s to 0.1 s (round half to even)
+	  reproduces all 317 time values of the example data
+	- dt rounded to an integer number of samples, round(fs*dt)/fs (0.125 s -> 6000 samples at 48 kHz; 5512.5 -> 5513
+	  samples at 44.1 kHz, i.e. dt = 0.12501 s, 0.01 % slower)
+	- consistency check: every time value must lie within dt/2 of the uniform grid (offset fitted), so that each time
+	  step falls into its own block. If not (missing or repeated time steps, a time step that really varies), a WARNING
+	  (auralization:timeStepNotUniform) names the time value with the largest deviation; the run continues. Limitation:
+	  a single missing step in an otherwise exact time column cannot be told apart from a slightly longer dt (with
+	  rounded time values, as in PANAM, it is detected)
+	- the input data are not changed (spectra, positions, angles and order of the time steps); only the time assigned to
+	  each time step changes, from the rounded value in the data to (k-1)*dt. The constant time step was already assumed
+	  before; only its value changes
+	- log: dt (and block length in samples), first difference and range of the differences of the time values, max.
+	  deviation from the grid, duration of the time steps, and for information distance per step / vel and
+	  (retarded time - dist/c) per step (vel is the true airspeed: with wind it differs from the ground speed, so the
+	  first estimate can differ legitimately). Trim functions: dt, first difference, and the actual duration of the
+	  trimmed data (before: 2*trim_time was printed, not the duration of the selected time steps)
+	- verification: utilities/validate_time_step (synthetic time vectors with rounding, missing and repeated steps, a
+	  varying step, jitter; example PANAM data, full record and parts of it)
 - HRTF angles now describe the direction from which each eigenray ARRIVES at the receiver (wavefront normal at the last
   ray point, new function <get_arrival_angles>). Before, the reversed launch direction at the source was used
   ([phi +- 180, theta - 90] for the direct path; launch azimuth and the straight-line elevation from the reflection
@@ -165,8 +200,8 @@ ROBUSTNESS AND USABILITY
   rendering starts)
 - sampling_freq is validated before the rendering (in <MASTER_auralization_EngineAirframe>):
 	- error if fs < 44.1 kHz or not an integer (HRIRs and synthesis would lose high-frequency content)
-	- error if fs*dt (PANAM time step) is not an integer number of samples (the block length is round(fs*dt),
-	  so the auralized signal would drift in time)
+	- fs*dt (time step of the input data) is always an integer number of samples: dt is rounded to an integer number
+	  of samples (see BUG FIXES, time step). Before (unreleased), a non-integer fs*dt gave an error
 	- console note if fs > 48 kHz (no benefit) and if binaural with fs ~= 44.1 kHz (HRIRs resampled; binaural
 	  signals contain no energy above 22.05 kHz, the mono signal does)
 	- recommended: 48000 Hz (DEFAULT, native rate of ECMA-418-2 and most audio hardware) or 44100 Hz
@@ -194,6 +229,19 @@ ROBUSTNESS AND USABILITY
 
 CHANGES IN RESULTS
 
+- all results change with the time step fix (18.11.2026, see BUG FIXES), for input data with rounded time values (e.g.
+  PANAM, 0.1 s resolution with a time step of 0.125 s):
+	- correct playback speed (both Doppler methods): with the same trim_time, the .wav files have about the same
+	  length as before but cover the intended part of the flight (example: 161 instead of 201 time steps for
+	  trim_time = 10, 6000 samples per time step at 48 kHz)
+	- SEL, LAE and EPNL approx. +1 dB (10*log10(1.25) = 0.97 dB, slightly less where the old, wider window contained
+	  more of the flyover); doppler_method = input: pitch unchanged
+	- doppler_method = delay_line: Doppler factor from the propagation times now matches the straight-line estimate
+	  from the input data (homogeneous example: approx. 0.800 ... 1.200 vs 0.802 ... 1.203); remaining differences in
+	  the sounding example show the effect of refraction
+	- coherence loss at 48 kHz: 5 sub-blocks per time step (gcd(6000, 4800) = 1200 samples), before 1. At 44.1 kHz,
+	  5513 and 4410 samples have no practical common grid: the decorrelation filters are redrawn at the block boundary
+	  following each 0.1 s mark (warning auralization:coherenceUpdate)
 - mono results: unchanged, except for flush-mounted receivers (differ from the old 1 cm workaround above approx. 4 kHz)
   and when coherence loss is switched on
 - binaural results: change for fs ~= 44.1 kHz (resampling fix: spectral features and ITDs; and level, -0.74 dB at 48 kHz)
@@ -211,7 +259,7 @@ CHANGES IN RESULTS
 BREAKING CHANGES
 
 - no .ini or more than one .ini found in <main_input_path> (and no <input_file_path> given) now throws an error
-- sampling_freq < 44100 Hz, or with a non-integer fs*dt, now throws an error
+- sampling_freq < 44100 Hz now throws an error
 - run_auralization.m renamed to ex_run_auralization.m
 - relative <sounding_filepath> is interpreted relative to the .ini folder, not MATLAB's current folder
 - new folder auralization/hrtf_equalization must be on the path (added by startup_auralization.m)

@@ -80,7 +80,11 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %       twice). The framework cannot check which kind of data is given: this is a
 %       decision of the user (see the example .ini files).
 %
-%     - The time step, dt, is taken from the PANAM input data. PANAM predictions
+%     - The time step, dt, is taken from the PANAM input data. It must be constant
+%       and is estimated from the time values of all time steps, as these can be
+%       rounded (PANAM writes the source time with 0.1 s resolution, so a time step
+%       of 0.125 s gives differences of 0.1 and 0.2 s). A warning is given if the
+%       time values do not fit a uniform time step (see <get_time_step>). PANAM predictions
 %       with a time step of 0.1 s (or lower) are recommended, otherwise ground
 %       reflections are not smoothly synthesised. An interpolation of the flight
 %       trajectory used to compute the atmospheric transfer functions could be
