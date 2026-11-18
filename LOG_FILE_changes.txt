@@ -9,12 +9,18 @@ BUG FIXES
   <validate_time_step>), used in <MASTER_auralization_EngineAirframe> and the trim functions. Before, dt was the first
   difference of the time values, which PANAM rounds to 0.1 s: with a real time step of 0.125 s, dt = 0.1 s (flyover
   played 1.25x too fast, SEL approx. 1 dB too low, Doppler shift approx. 25 % too strong with delay_line). dt is rounded
-  to an integer number of samples; warning if the time values do not fit a uniform time step. The input data are not
-  changed
+  to a multiple of 10 samples (see next entry); warning if the time values do not fit a uniform time step. The input
+  data are not changed
+- follow-up fix to PR #10 (merge commit 44bd0f9): dt is rounded to a multiple of 10 samples, not just to an integer
+  number of samples (<get_time_step>, new optional input nMultiple, DEFAULT 10). <broadbandSynthesis_smooth> splits each
+  block into 5 hops and needs an even block length. With slightly irregular time values (e.g. one step of 0.11 s instead
+  of 0.1 s), 44bd0f9 rounded dt to e.g. 4802 samples (hop size 960.4 samples) and the broadband synthesis stopped with an
+  indexing error (runs failed, no wrong results). <broadbandSynthesis_smooth> now checks the block length and gives a
+  clear error (auralization:blockLength)
 
 ROBUSTNESS AND USABILITY
 
-- the error for a non-integer fs*dt (13.11.2026) was removed: dt is now always an integer number of samples
+- the error for a non-integer fs*dt (13.11.2026) was removed: fs*dt is now always a multiple of 10 samples
 - trim functions: the log prints dt and the actual duration of the trimmed data (before: 2*trim_time)
 - .ini files: description of smoothings_emission_based rewritten for users (behaviour unchanged)
 
@@ -23,7 +29,7 @@ CHANGES IN RESULTS
 - correct playback speed (with the same trim_time, the files cover the intended part of the flight). Homogeneous example,
   doppler_method = input: same file length, LAE +0.8 dB, LAFmax unchanged, pitch unchanged. delay_line (homogeneous
   example): Doppler factor from the propagation times agrees with the estimate from the input data within 0.007
-  (before: approx. 0.05). At
+  (before: approx. 0.05). At 44.1 kHz, 0.125 s becomes 5510 samples (dt = 0.124943 s). At
   44.1 kHz with coherence loss, the decorrelation filters are redrawn at the block boundary after each 0.1 s mark (warning)
 
 BREAKING CHANGES
