@@ -1,4 +1,34 @@
-++ 18.11.2026 - unreleased (all changes since v1.0, 22.09.2025)
+++ unreleased: all changes since v1.0 (22.09.2025), newest first
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 18.11.2026 - time step of the input data
+
+BUG FIXES
+
+- dt is estimated from the time values of all time steps (new function <get_time_step>, verification
+  <validate_time_step>), used in <MASTER_auralization_EngineAirframe> and the trim functions. Before, dt was the first
+  difference of the time values, which PANAM rounds to 0.1 s: with a real time step of 0.125 s, dt = 0.1 s (flyover
+  played 1.25x too fast, SEL approx. 1 dB too low, Doppler shift approx. 25 % too strong with delay_line). dt is rounded
+  to an integer number of samples; warning if the time values do not fit a uniform time step. The input data are not
+  changed
+
+ROBUSTNESS AND USABILITY
+
+- the error for a non-integer fs*dt (13.11.2026) was removed: dt is now always an integer number of samples
+- trim functions: the log prints dt and the actual duration of the trimmed data (before: 2*trim_time)
+
+CHANGES IN RESULTS
+
+- correct playback speed (with the same trim_time, the files cover the intended part of the flight); SEL, LAE and EPNL
+  approx. +1 dB; smaller Doppler shift with delay_line. At 44.1 kHz with coherence loss, the decorrelation filters are
+  redrawn at the block boundary after each 0.1 s mark (warning)
+
+BREAKING CHANGES
+
+- sampling_freq: a non-integer fs*dt no longer throws an error (see above)
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 16.11.2026 - Doppler effect by variable delay lines (merged 18.11.2026)
 
 NEW FEATURES
 
@@ -43,27 +73,74 @@ NEW FEATURES
 	  noise on tau; fractional delay accuracy < 0.01 dB up to 0.35*fs; integer delay exact). New function
 	  auralization/private/get_doppler_method (reads and validates the .ini keys)
 
-- Turbulence-induced coherence loss between the direct and ground-reflected sound (optional, .ini: consider_coherence_loss)
-	- per time step, a coherence factor Ccoh(f) = exp(-w*f^2) is calculated from the atmospheric boundary layer
-	  parameters (friction velocity, surface heat flux, boundary layer height, surface temperature)
-	- two models available (.ini: coherence_model):
-		slanted     -> Ostashev et al. (2024), JASA 156(1), 107-118, Eq. 52 (DEFAULT)
-		homogeneous -> Pieren & Lincke (2022), JASA 151(4), 2453-2460, Eq. 4
-	- the coherence loss is applied in <get_FIR> through random decorrelation filters, updated in fixed epochs of 0.1 s.
-	  The random realizations are reproducible through .ini: coherence_seed
-	- ignored (with console message) for flush-mounted receivers, as there is no second propagation path
-	- new plots comparing the transfer functions with and without coherence loss (only if coherence loss is applied,
-	  plotted once for the overall signal), new function <PLOT_coherence_loss_TF>:
-		*_coherence_loss_TF_difference_spectrogram.png -> level difference (with minus without) over time and
-		  frequency; symmetric colorbar adapted to each case (99th percentile of |dL|); dashed line at the closest
-		  point to the receiver (shortest direct-path propagation time)
-		*_coherence_loss_TF_comparison.pdf -> both transfer functions at the closest point and at the time step
-		  with the strongest coherence loss (largest w)
-	  Both transfer functions are built as H_direct + H_reflected, i.e. they differ only by the decorrelation filters
-	  actually used in the auralization (<get_FIR> output OUT.TF_coherenceLoss)
-	- new folder auralization/coherence_loss: get_abl_turbulence, get_coherence_factor_slanted,
-	  get_coherence_factor_homogeneous, get_decorrelation_filter + verification routines
-	  (validate_ostashev, validate_decorrelation_filter, compare_coherence_models)
+ROBUSTNESS AND USABILITY
+
+- doppler_method (input/delay_line) and convective_amplification (0/1) are validated before the rendering
+  (errors auralization:invalidDopplerMethod, auralization:invalidConvectiveAmplification)
+
+CHANGES IN RESULTS
+
+- doppler_method = input (DEFAULT): results unchanged (checked: bit-identical output of <apply_propagation>)
+
+BREAKING CHANGES
+
+- new folder auralization/doppler must be on the path (added by startup_auralization.m)
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 14.11.2026 - HRTF angles from the arrival direction, head orientation
+
+NEW FEATURES
+
+- Head orientation check (binaural_signal = 1): for each receiver, the azimuth/elevation from which the direct sound
+  arrives at the first and last time step, the direction the head faces and the resulting HRTF azimuth
+  (front/left/back/right) are printed to the console and log.txt (new function <print_head_orientation>)
+
+BUG FIXES
+
+- HRTF angles now describe the direction from which each eigenray ARRIVES at the receiver (wavefront normal at the last
+  ray point, new function <get_arrival_angles>). Before, the reversed launch direction at the source was used
+  ([phi +- 180, theta - 90] for the direct path; launch azimuth and the straight-line elevation from the reflection
+  point for the reflected path). Both are identical for straight rays (homogeneous atmosphere without wind); with
+  refraction and wind (e.g. sounding atmospheres, wind profiles), the HRTFs were evaluated for the emission direction
+  instead of the incidence direction. The launch angles are still used for the comparison with the PANAM emission
+  angles (source directivity). The max. deviation between both directions (direct path) is printed in the log
+- Reflected path, HRTF azimuth: the branch condition tested the direct ray (eigenrays(i,1).phi) instead of the reflected
+  ray (eigenrays(i,2).phi). If the launch azimuths of both rays fell on different sides of 180 deg (possible below the
+  flight track, y = 0, where tiny lateral components of either sign occur), no branch was executed and the HRTF angles
+  of that time step stayed at [0, 0] (front, horizontal). The branch no longer exists (see above)
+- Reflected path: only the elevation is smoothed (moving average, 10 time steps), no longer the azimuth. Averaging the
+  azimuth mixed the 180 -> 0 deg jump at overhead (example trajectory: smoothed azimuth swept 162 -> 90 -> 18 deg within
+  approx. 1 s; direction error up to 3 deg, as the elevation is close to -90 deg there) and turns a 0/360 deg wrap into
+  approx. 180 deg (reflected sound from the back instead of the front). The smoothed elevation is computed as before
+
+ROBUSTNESS AND USABILITY
+
+- head_orientation: description corrected (behaviour unchanged). It is a fixed yaw of the head in the x-y plane of the
+  PANAM coordinate system (same for all receivers, does not follow the aircraft); the HRTF azimuth is the arrival azimuth
+  (0 = +x, 90 = +y) + head_orientation, i.e. the head is turned CLOCKWISE: 0 -> faces +x, 90 -> -y, 180 -> -x, 270 -> +y.
+  The old description had 0 and 180 swapped (for a flight towards +x, 0 gives back -> overhead -> front and 180 gives
+  front -> overhead -> back) and the facing directions of 90 and 270 swapped (the ear order given was correct). The README
+  also stated that the receiver faces the sound source by default, which is not the case. The new description states
+  that it assumes a flight towards +x (PANAM approach and departure) and explains flights towards -x and lateral
+  receivers. Updated in the headers of <get_FIR>, <get_propagation> and <auralization_master>, both example .ini files
+  and README
+- head_orientation is validated (must be a number, error auralization:invalidHeadOrientation); read by the new
+  function <get_head_orientation>, used by <get_FIR> and <MASTER_auralization_EngineAirframe>
+
+CHANGES IN RESULTS
+
+- binaural results, HRTF angles:
+	- with refraction or wind (sounding atmospheres, wind profiles): arrival instead of launch direction
+	- homogeneous atmosphere without wind: direct path unchanged up to the eigenray accuracy (see the max. deviation
+	  printed in the log); reflected path changed only around overhead for receivers below the flight track (azimuth
+	  no longer smoothed) and at time steps affected by the reflected-path branch bug
+	- the meaning of head_orientation is unchanged (only its description was corrected)
+	- mono results unchanged (the angles are only used for the HRTFs)
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 13.11.2026 - DF and FF equalized binaural signals, HRIR level fix, sampling frequency check
+
+NEW FEATURES
 
 - Diffuse-field (DF) and free-field (FF) equalized binaural signals (optional, .ini: generate_equalized_binaural, DEFAULT 0)
 	- the binaural signal is always rendered with the measured (blocked ear-canal) FABIAN HRTFs
@@ -92,6 +169,78 @@ NEW FEATURES
 	  and maintainer script utilities/generate_FABIAN_FF_equalization_mat.m. If the file is missing, the filters are
 	  designed on the fly (warning)
 
+BUG FIXES
+
+- Level of the binaural signals at fs ~= 44.1 kHz: <resample> keeps the amplitude of a signal, so the resampled HRIRs had
+  a frequency response scaled by fs/44100 (+0.74 dB at fs = 48 kHz, at all frequencies). The resampled HRIRs are now
+  multiplied by 44100/fs. Binaural results at fs = 48 kHz are 0.74 dB lower than before; results at fs = 44.1 kHz and
+  mono results are unchanged (checked: bit-identical at 44.1 kHz)
+
+ROBUSTNESS AND USABILITY
+
+- save_figs and generate_equalized_binaural are validated (only 0 or 1 accepted; generate_equalized_binaural before the
+  rendering starts)
+- sampling_freq is validated before the rendering (in <MASTER_auralization_EngineAirframe>):
+	- error if fs < 44.1 kHz or not an integer (HRIRs and synthesis would lose high-frequency content)
+	- error if fs*dt (PANAM time step) is not an integer number of samples (the block length is round(fs*dt),
+	  so the auralized signal would drift in time)
+	- console note if fs > 48 kHz (no benefit) and if binaural with fs ~= 44.1 kHz (HRIRs resampled; binaural
+	  signals contain no energy above 22.05 kHz, the mono signal does)
+	- recommended: 48000 Hz (DEFAULT, native rate of ECMA-418-2 and most audio hardware) or 44100 Hz
+
+CHANGES IN RESULTS
+
+- binaural results at fs ~= 44.1 kHz: -0.74 dB at 48 kHz (level fix of the resampled HRIRs, see above)
+
+BREAKING CHANGES
+
+- sampling_freq < 44100 Hz, or with a non-integer fs*dt, now throws an error
+- new folder auralization/hrtf_equalization must be on the path (added by startup_auralization.m)
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 28.10.2026 - log file, coherence loss plots
+
+NEW FEATURES
+
+- Log file: all console output of a run is saved to results_auralization/log.txt (overwritten on each new run).
+  At the start of the log, all parameters read from the .ini file are listed (relative paths resolved); parameters
+  not listed use their DEFAULT values
+
+- Coherence loss: plots of the transfer functions with and without coherence loss
+	- new plots comparing the transfer functions with and without coherence loss (only if coherence loss is applied,
+	  plotted once for the overall signal), new function <PLOT_coherence_loss_TF>:
+		*_coherence_loss_TF_difference_spectrogram.png -> level difference (with minus without) over time and
+		  frequency; symmetric colorbar adapted to each case (99th percentile of |dL|); dashed line at the closest
+		  point to the receiver (shortest direct-path propagation time)
+		*_coherence_loss_TF_comparison.pdf -> both transfer functions at the closest point and at the time step
+		  with the strongest coherence loss (largest w)
+	  Both transfer functions are built as H_direct + H_reflected, i.e. they differ only by the decorrelation filters
+	  actually used in the auralization (<get_FIR> output OUT.TF_coherenceLoss)
+
+BUG FIXES
+
+- <PLOT_HRIR_spectrogram> received the direct-path HRIR twice; now receives the direct and reflected HRIRs.
+  Without ground reflection (consider_ground_reflection = 0), only the direct path is plotted (1x2 layout)
+  instead of erroring. Colorbar label corrected to "Magnitude (dB)" (HRTF magnitude, not SPL)
+
+---------------------------------------------------------------------------------------------------------------------------------------
+++ 27.10.2026 - coherence loss and changes since v1.0 (documented on this date)
+
+NEW FEATURES
+
+- Turbulence-induced coherence loss between the direct and ground-reflected sound (optional, .ini: consider_coherence_loss)
+	- per time step, a coherence factor Ccoh(f) = exp(-w*f^2) is calculated from the atmospheric boundary layer
+	  parameters (friction velocity, surface heat flux, boundary layer height, surface temperature)
+	- two models available (.ini: coherence_model):
+		slanted     -> Ostashev et al. (2024), JASA 156(1), 107-118, Eq. 52 (DEFAULT)
+		homogeneous -> Pieren & Lincke (2022), JASA 151(4), 2453-2460, Eq. 4
+	- the coherence loss is applied in <get_FIR> through random decorrelation filters, updated in fixed epochs of 0.1 s.
+	  The random realizations are reproducible through .ini: coherence_seed
+	- ignored (with console message) for flush-mounted receivers, as there is no second propagation path
+	- new folder auralization/coherence_loss: get_abl_turbulence, get_coherence_factor_slanted,
+	  get_coherence_factor_homogeneous, get_decorrelation_filter + verification routines
+	  (validate_ostashev, validate_decorrelation_filter, compare_coherence_models)
+
 - Optional HRTF high-frequency regularization (internal flag hrtf_regularization in <get_FIR>, DEFAULT 0)
 	- flattens the HRTF magnitude between f1_reg = 4 kHz and f2_reg = 8 kHz, keeping the phase
 	- off by default, since it removes pinna notches and high-frequency ILD (elevation/front-back cues)
@@ -102,10 +251,6 @@ NEW FEATURES
 	  interference notch (approx. 8.6 kHz overhead) that only existed because of the arbitrary 1 cm
 	- binaural rendering is disabled with a warning for flush-mounted receivers (no head at zobs = 0)
 
-- Log file: all console output of a run is saved to results_auralization/log.txt (overwritten on each new run).
-  At the start of the log, all parameters read from the .ini file are listed (relative paths resolved); parameters
-  not listed use their DEFAULT values
-
 - Cleaner plots (closes #5)
 	- new .ini parameter save_figs: 0 -> only .wav files and log.txt are saved; 1 -> figures are also saved (DEFAULT)
 	- new flag show_figures_on_screen (in <auralization_master>, DEFAULT 0): figures are created/saved without being
@@ -113,75 +258,13 @@ NEW FEATURES
 	- if save_figs = 0 and show_figures_on_screen = 0, most figures are not created at all (faster runs)
 	- .wav files are now ALWAYS written. Before, the .wav save path was tied to the figure saving
 
-- Head orientation check (binaural_signal = 1): for each receiver, the azimuth/elevation from which the direct sound
-  arrives at the first and last time step, the direction the head faces and the resulting HRTF azimuth
-  (front/left/back/right) are printed to the console and log.txt (new function <print_head_orientation>)
-
 BUG FIXES
 
-- Time step of the input data (dt): taken from the time values of ALL time steps, no longer from the first difference
-  (new function utilities/get_time_step, used in <MASTER_auralization_EngineAirframe>, <trim_data_TimeDistanceBased> and
-  <trim_data_TimeBased>). PANAM writes the source time with a resolution of 0.1 s, while its time step can be different
-  (example data: 0.125 s, so the differences of the time values are 0.1 or 0.2 s). Before, dt = time(2) - time(1) =
-  0.1 s, i.e. a rounding artefact (a file starting with a 0.2 s difference would have given dt = 0.2 s). Consequences
-  of the old dt (example data):
-	- each time step was rendered as 0.1 s instead of 0.125 s: the flyover played 1.25x too fast (time history
-	  compressed to 80 %); trim_time = 10 covered 25 s of flight instead of 20 s; SEL approx. 1 dB too low
-	  (10*log10(0.8)), duration-based metrics (e.g. EPNL) affected. With doppler_method = input, the pitch was right
-	  (it comes from the predictions)
-	- doppler_method = delay_line: D = 1 + dtau/dt with dt = 0.1 s, i.e. a Doppler shift approx. 25 % too strong
-	  (homogeneous example: D = 0.750 ... 1.249 instead of 0.800 ... 1.200)
-  Now:
-	- dt = step of the uniform grid t0 + (k-1)*dt closest to all time values (smallest maximum deviation). Rounding
-	  errors do not accumulate (example data: dt = 0.125 s exactly, for the full record and for every part of it with
-	  12 or more time steps). Confirmed by two independent quantities of the data: distance per step / vel = 0.12500 s,
-	  (retarded time - dist/c) per step = 0.12500 s; the rounding of k*0.125 s to 0.1 s (round half to even)
-	  reproduces all 317 time values of the example data
-	- dt rounded to an integer number of samples, round(fs*dt)/fs (0.125 s -> 6000 samples at 48 kHz; 5512.5 -> 5513
-	  samples at 44.1 kHz, i.e. dt = 0.12501 s, 0.01 % slower)
-	- consistency check: every time value must lie within dt/2 of the uniform grid (offset fitted), so that each time
-	  step falls into its own block. If not (missing or repeated time steps, a time step that really varies), a WARNING
-	  (auralization:timeStepNotUniform) names the time value with the largest deviation; the run continues. Limitation:
-	  a single missing step in an otherwise exact time column cannot be told apart from a slightly longer dt (with
-	  rounded time values, as in PANAM, it is detected)
-	- the input data are not changed (spectra, positions, angles and order of the time steps); only the time assigned to
-	  each time step changes, from the rounded value in the data to (k-1)*dt. The constant time step was already assumed
-	  before; only its value changes
-	- log: dt (and block length in samples), first difference and range of the differences of the time values, max.
-	  deviation from the grid, duration of the time steps, and for information distance per step / vel and
-	  (retarded time - dist/c) per step (vel is the true airspeed: with wind it differs from the ground speed, so the
-	  first estimate can differ legitimately). Trim functions: dt, first difference, and the actual duration of the
-	  trimmed data (before: 2*trim_time was printed, not the duration of the selected time steps)
-	- verification: utilities/validate_time_step (synthetic time vectors with rounding, missing and repeated steps, a
-	  varying step, jitter; example PANAM data, full record and parts of it)
-- HRTF angles now describe the direction from which each eigenray ARRIVES at the receiver (wavefront normal at the last
-  ray point, new function <get_arrival_angles>). Before, the reversed launch direction at the source was used
-  ([phi +- 180, theta - 90] for the direct path; launch azimuth and the straight-line elevation from the reflection
-  point for the reflected path). Both are identical for straight rays (homogeneous atmosphere without wind); with
-  refraction and wind (e.g. sounding atmospheres, wind profiles), the HRTFs were evaluated for the emission direction
-  instead of the incidence direction. The launch angles are still used for the comparison with the PANAM emission
-  angles (source directivity). The max. deviation between both directions (direct path) is printed in the log
-- Reflected path, HRTF azimuth: the branch condition tested the direct ray (eigenrays(i,1).phi) instead of the reflected
-  ray (eigenrays(i,2).phi). If the launch azimuths of both rays fell on different sides of 180 deg (possible below the
-  flight track, y = 0, where tiny lateral components of either sign occur), no branch was executed and the HRTF angles
-  of that time step stayed at [0, 0] (front, horizontal). The branch no longer exists (see above)
-- Reflected path: only the elevation is smoothed (moving average, 10 time steps), no longer the azimuth. Averaging the
-  azimuth mixed the 180 -> 0 deg jump at overhead (example trajectory: smoothed azimuth swept 162 -> 90 -> 18 deg within
-  approx. 1 s; direction error up to 3 deg, as the elevation is close to -90 deg there) and turns a 0/360 deg wrap into
-  approx. 180 deg (reflected sound from the back instead of the front). The smoothed elevation is computed as before
-
-- Level of the binaural signals at fs ~= 44.1 kHz: <resample> keeps the amplitude of a signal, so the resampled HRIRs had
-  a frequency response scaled by fs/44100 (+0.74 dB at fs = 48 kHz, at all frequencies). The resampled HRIRs are now
-  multiplied by 44100/fs. Binaural results at fs = 48 kHz are 0.74 dB lower than before; results at fs = 44.1 kHz and
-  mono results are unchanged (checked: bit-identical at 44.1 kHz)
 - HRIRs are resampled from 44.1 kHz (FABIAN) to the framework sampling frequency. Before, at fs = 48 kHz, all HRTF spectral
   features were shifted up by a factor fs/44100 (approx. 1.5 semitones) and all ITDs were scaled by 44100/fs
 - FIR filters: direct and reflected IRs are centered to the same delay, and the original relative delay is applied to the
   reflected IR only. The sum of both IRs now matches the combined transfer function from ART. The relative delay is
   computed as the minimum signed circular distance (IRs are periodic after the IFFT). Case without ground reflection fixed
-- <PLOT_HRIR_spectrogram> received the direct-path HRIR twice; now receives the direct and reflected HRIRs.
-  Without ground reflection (consider_ground_reflection = 0), only the direct path is plotted (1x2 layout)
-  instead of erroring. Colorbar label corrected to "Magnitude (dB)" (HRTF magnitude, not SPL)
 - <PLOT_spectrogram_difference> failed when mono and binaural signals had different lengths
 - <create_auralization_results_folder> used hardcoded '\' separators (failed on Linux/macOS) and assumed the results path
   ends with a separator; a <results_path> without trailing separator created a wrongly named folder. Now uses <fullfile>
@@ -196,15 +279,6 @@ ROBUSTNESS AND USABILITY
 	- relative <sounding_filepath> is resolved relative to the folder of the .ini (works from any MATLAB current folder
 	  and in the compiled .exe); absolute paths unchanged
 	- <main_input_path> can be given with or without a trailing file separator
-- save_figs and generate_equalized_binaural are validated (only 0 or 1 accepted; generate_equalized_binaural before the
-  rendering starts)
-- sampling_freq is validated before the rendering (in <MASTER_auralization_EngineAirframe>):
-	- error if fs < 44.1 kHz or not an integer (HRIRs and synthesis would lose high-frequency content)
-	- fs*dt (time step of the input data) is always an integer number of samples: dt is rounded to an integer number
-	  of samples (see BUG FIXES, time step). Before (unreleased), a non-integer fs*dt gave an error
-	- console note if fs > 48 kHz (no benefit) and if binaural with fs ~= 44.1 kHz (HRIRs resampled; binaural
-	  signals contain no energy above 22.05 kHz, the mono signal does)
-	- recommended: 48000 Hz (DEFAULT, native rate of ECMA-418-2 and most audio hardware) or 44100 Hz
 - show_propagation in <MASTER_auralization_EngineAirframe> now follows the <show> flag (was hardcoded to 1)
 - xline/yline replaced by version-safe wrappers (xline_local, yline_local) for MATLAB <= R2018a
 - example input data reorganized: flight data shared in input_data/, one subfolder (with one .ini) per example:
@@ -213,59 +287,22 @@ ROBUSTNESS AND USABILITY
   error-case tests (run_tests)
 - documentation: header of <auralization_master> (outputs, show/save options, propagation effects, binaural synthesis),
   header of <get_FIR>, .ini files and README updated
-- head_orientation: description corrected (behaviour unchanged). It is a fixed yaw of the head in the x-y plane of the
-  PANAM coordinate system (same for all receivers, does not follow the aircraft); the HRTF azimuth is the arrival azimuth
-  (0 = +x, 90 = +y) + head_orientation, i.e. the head is turned CLOCKWISE: 0 -> faces +x, 90 -> -y, 180 -> -x, 270 -> +y.
-  The old description had 0 and 180 swapped (for a flight towards +x, 0 gives back -> overhead -> front and 180 gives
-  front -> overhead -> back) and the facing directions of 90 and 270 swapped (the ear order given was correct). The README
-  also stated that the receiver faces the sound source by default, which is not the case. The new description states
-  that it assumes a flight towards +x (PANAM approach and departure) and explains flights towards -x and lateral
-  receivers. Updated in the headers of <get_FIR>, <get_propagation> and <auralization_master>, both example .ini files
-  and README
-- head_orientation is validated (must be a number, error auralization:invalidHeadOrientation); read by the new
-  function <get_head_orientation>, used by <get_FIR> and <MASTER_auralization_EngineAirframe>
-- doppler_method (input/delay_line) and convective_amplification (0/1) are validated before the rendering
-  (errors auralization:invalidDopplerMethod, auralization:invalidConvectiveAmplification)
 
 CHANGES IN RESULTS
 
-- all results change with the time step fix (18.11.2026, see BUG FIXES), for input data with rounded time values (e.g.
-  PANAM, 0.1 s resolution with a time step of 0.125 s):
-	- correct playback speed (both Doppler methods): with the same trim_time, the .wav files have about the same
-	  length as before but cover the intended part of the flight (example: 161 instead of 201 time steps for
-	  trim_time = 10, 6000 samples per time step at 48 kHz)
-	- SEL, LAE and EPNL approx. +1 dB (10*log10(1.25) = 0.97 dB, slightly less where the old, wider window contained
-	  more of the flyover); doppler_method = input: pitch unchanged
-	- doppler_method = delay_line: Doppler factor from the propagation times now matches the straight-line estimate
-	  from the input data (homogeneous example: approx. 0.800 ... 1.200 vs 0.802 ... 1.203); remaining differences in
-	  the sounding example show the effect of refraction
-	- coherence loss at 48 kHz: 5 sub-blocks per time step (gcd(6000, 4800) = 1200 samples), before 1. At 44.1 kHz,
-	  5513 and 4410 samples have no practical common grid: the decorrelation filters are redrawn at the block boundary
-	  following each 0.1 s mark (warning auralization:coherenceUpdate)
 - mono results: unchanged, except for flush-mounted receivers (differ from the old 1 cm workaround above approx. 4 kHz)
   and when coherence loss is switched on
-- binaural results: change for fs ~= 44.1 kHz (resampling fix: spectral features and ITDs; and level, -0.74 dB at 48 kHz)
-  and because the HRTF regularization is now off by default.
+- binaural results: change for fs ~= 44.1 kHz (resampling fix) and because the HRTF regularization is now off by default.
   The previous binaural results cannot be reproduced exactly, since they included the sampling frequency error
-- doppler_method = input (DEFAULT): results unchanged (checked: bit-identical output of <apply_propagation>, 16.11.2026)
-- binaural results, HRTF angles (14.11.2026):
-	- with refraction or wind (sounding atmospheres, wind profiles): arrival instead of launch direction
-	- homogeneous atmosphere without wind: direct path unchanged up to the eigenray accuracy (see the max. deviation
-	  printed in the log); reflected path changed only around overhead for receivers below the flight track (azimuth
-	  no longer smoothed) and at time steps affected by the reflected-path branch bug
-	- the meaning of head_orientation is unchanged (only its description was corrected)
-	- mono results unchanged (the angles are only used for the HRTFs)
 
 BREAKING CHANGES
 
 - no .ini or more than one .ini found in <main_input_path> (and no <input_file_path> given) now throws an error
-- sampling_freq < 44100 Hz now throws an error
 - run_auralization.m renamed to ex_run_auralization.m
 - relative <sounding_filepath> is interpreted relative to the .ini folder, not MATLAB's current folder
-- new folder auralization/hrtf_equalization must be on the path (added by startup_auralization.m)
-- new folder auralization/doppler must be on the path (added by startup_auralization.m)
 
-- DEFAULT values (.ini file)
+---------------------------------------------------------------------------------------------------------------------------------------
+++ DEFAULT values (.ini file), current state of all unreleased changes above
 
 	save_figs = 1, defined in auralization_master
 	generate_equalized_binaural = 0, defined in MASTER_auralization_EngineAirframe
