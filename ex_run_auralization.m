@@ -82,10 +82,10 @@ clear; close all; clc;
 %% select example case
 
 % 'homogeneous' - homogeneous atmosphere
-% atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
+atmosphere = 'homogeneous'; % <-- uncomment here for homogeneous atmosphere
 
 % 'sounding'    - atmosphere imported from atmospheric soundings
-atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
+% atmosphere = 'sounding'; % <-- uncomment here for inhomogeneous atmosphere
 
 atmosphere = validatestring(atmosphere, {'homogeneous', 'sounding'});
 
@@ -126,8 +126,9 @@ results_path = [fullfile(script_folder, ['output_data_test_' atmosphere '_atmosp
 %  - the decorrelation filters of the coherence loss have their own seed (coherence_seed in
 %    the .ini file) and do not depend on this reset
 % Remove or change the line below to obtain other realizations (e.g. rng(2), rng('shuffle')).
-rng('default');
+
+% rng('default');
 
 %% run auralization (see POSSIBLE CALLS in the header for other options)
-
+ 
 auralization_master(core_path, tag, input_file, results_path);

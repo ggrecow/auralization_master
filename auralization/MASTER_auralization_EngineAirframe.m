@@ -47,9 +47,12 @@ function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_p
 %   (<doppler_method> = delay_line, see <get_doppler_method>); Doppler factor from the
 %   propagation times compared with the straight-line estimate from the input data
 %
-%   AI disclosure (14.11.2026 and 16.11.2026 changes): Generative AI assistance (Anthropic
-%   Claude) was used to develop this code under the author's direction. All codes were
-%   verified by the author.
+% Gil Felix Greco, Braunschweig 18.11.2026 - time step of the input data estimated from all time
+%   steps (<get_time_step>) instead of the first difference of the (rounded) time values
+%
+%   AI disclosure (14.11.2026, 16.11.2026 and 18.11.2026 changes): Generative AI assistance
+%   (Anthropic Claude) was used to develop this code under the author's direction. All codes
+%   were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global input_file
@@ -117,12 +120,21 @@ else
     end
 end
 
-% time resolution from PANAM. Assumes it is constant (source noise prediction dt from PANAM is usually .5 seconds and cte) - ACHTUNG: this is the case only for sound source   
-global dt_panam
-dt_panam =  input{2,1}.source_time - input{1,1}.source_time;  
-
 % check the sampling frequency (before the time-consuming rendering)
-il_check_sampling_frequency( fs, dt_panam, binaural_signal );
+il_check_sampling_frequency( fs, binaural_signal );
+
+% time step of the input data (constant; sound source time). Estimated from the time values of
+% all time steps and rounded to an integer number of samples, with a check that the time values
+% fit a uniform grid (warning otherwise), see <get_time_step>. The time values can be rounded
+% (PANAM: 0.1 s resolution with a time step of e.g. 0.125 s), so the first difference is not used.
+global dt_panam
+time_input = zeros( size(input,1), 1 );
+for iStep = 1:size(input,1)
+    time_input(iStep) = input{iStep,1}.source_time;
+end
+[dt_panam, info_dt] = get_time_step( time_input, fs, 'MASTER_auralization_EngineAirframe' );
+il_print_time_step( input, info_dt );
+clear time_input iStep;
 
 %% get time vector
 
@@ -381,13 +393,53 @@ if show == true
 end
 end
 
-function il_check_sampling_frequency( fs, dt_panam, binaural_signal )
+function il_print_time_step( input, info )
+% Prints the time step used (console and log.txt), the first difference of the time values for
+% comparison, and two estimates from other quantities of the input data (information only).
+
+K = info.K;
+fprintf(['\n- Time step of the input data: dt = %.6f s (%d samples at %g Hz), from all %d time ' ...
+         'values (uniform grid closest to all values)\n'], info.dt, info.nSamples, info.fs, K );
+if abs( info.dt - info.dt_fit ) > 1e-9
+    fprintf('  dt rounded to an integer number of samples (from %.7f s)\n', info.dt_fit );
+end
+fprintf(['  time values in the input data: first difference %.4f s, differences %.4f ... %.4f s; ' ...
+         'max. deviation from the uniform grid %.4f s (limit dt/2 = %.4f s)\n'], ...
+    info.dt_first, info.diff_min, info.diff_max, info.max_deviation, info.dt/2 );
+fprintf('  %d time steps -> %.3f s (emission time)\n', K, (K-1)*info.dt );
+
+% estimates from other quantities of the input data (information only)
+txt = '';
+if all( isfield( input{1,1}, {'xpos', 'ypos', 'alt', 'vel'} ) )
+    pos = zeros( K, 3 ); vel = zeros( K, 1 );
+    for i = 1:K
+        pos(i,:) = [ input{i,1}.xpos input{i,1}.ypos input{i,1}.alt ];
+        vel(i)   = input{i,1}.vel;
+    end
+    dist_step = sum( sqrt( sum( diff(pos).^2, 2 ) ) )/(K-1); % mean distance per time step
+    txt = [ txt sprintf( 'distance per step / vel = %.5f s', dist_step/mean(vel) ) ];
+end
+if all( isfield( input{1,1}, {'retarded_time', 'dist', 'sound_speed'} ) )
+    t_e = zeros( K, 1 );
+    for i = 1:K
+        t_e(i) = input{i,1}.retarded_time - input{i,1}.dist/input{i,1}.sound_speed;
+    end
+    if ~isempty( txt ), txt = [ txt '; ' ]; end
+    txt = [ txt sprintf( '(retarded time - dist/c) per step = %.5f s', (t_e(end)-t_e(1))/(K-1) ) ];
+end
+if ~isempty( txt )
+    fprintf(['  for information: %s (vel is the true airspeed: with wind, the first estimate can ' ...
+             'differ legitimately)\n'], txt );
+end
+
+end
+
+function il_check_sampling_frequency( fs, binaural_signal )
 % Checks <sampling_freq> from the .ini file:
 %   - fs >= 44.1 kHz (error otherwise): the HRIRs (FABIAN, 44.1 kHz) and the
 %     synthesis would lose high-frequency content, which biases the metrics
-%   - fs*dt_panam must be an integer number of samples (error otherwise): the
-%     block length is round(fs*dt_panam), so a non-integer value would make the
-%     auralized signal drift slowly in time over the flyover
+%   - (fs*dt is always an integer number of samples: dt is rounded to an integer
+%     number of samples in <get_time_step>)
 %   - note if fs > 48 kHz: no benefit (binaural content ends at 22.05 kHz and air
 %     absorption removes the rest), only longer computation
 %   - note if binaural and fs ~= 44.1 kHz: HRIRs are resampled, so the binaural
@@ -399,15 +451,6 @@ if fs < 44100 || fs ~= round( fs )
     error( 'auralization:invalidSamplingFrequency', ...
         ['<sampling_freq> in the .ini file must be an integer >= 44100 Hz (got %g Hz). ' ...
          'Recommended: 48000 Hz (DEFAULT) or 44100 Hz.'], fs );
-end
-
-nBlock = fs*dt_panam;
-if abs( nBlock - round( nBlock ) ) > 1e-3   % tolerance for rounding errors in the PANAM time vector
-    error( 'auralization:nonIntegerBlockLength', ...
-        ['<sampling_freq> = %g Hz and the PANAM time step dt = %g s give a non-integer block ' ...
-         'length of %.4f samples, which would make the auralized signal drift in time. ' ...
-         'Use a sampling frequency for which fs*dt is an integer (e.g. 48000 or 44100 Hz).'], ...
-         fs, dt_panam, nBlock );
 end
 
 if fs > 48000
