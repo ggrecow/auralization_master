@@ -516,6 +516,12 @@ if show == 1
     % eigenrays.plot(); % ART function - blackbox plot function from ART
     % PLOT_eigenrays(receiver, source, eigenrays); % self-programmed plot eigenrays function
     
+    % HRTF angles (head orientation not applied, see <get_FIR>) and propagation times of
+    % every time step, e.g. to post-process other HRTF sets without re-rendering
+    output_struct.time = time;
+    output_struct.spherical_angles_HRTF = OUT.spherical_angles_HRTF;
+    output_struct.propagation_time = OUT.propagation_time;
+
     %% plot TF "spectrogram"
     
     % att_direct = zeros( size(freq,2), size(source,1) );
