@@ -1,6 +1,29 @@
 ++ unreleased: all changes since v1.0 (22.09.2025), newest first
 
 ---------------------------------------------------------------------------------------------------------------------------------------
+++ 19.11.2026 - HUTUBS HRTF database (optional)
+
+NEW FEATURES
+
+- binaural rendering with the HUTUBS HRTFs (96 subjects: 93 humans and FABIAN; measured) as an option next to FABIAN
+  (DEFAULT, unchanged). New .ini keys: hrtf_database = FABIAN (DEFAULT) or HUTUBS, hutubs_subject = 1 ... 96. The .ini
+  files explain the differences between both databases (incl. HUTUBS pp1/pp96 = FABIAN, not identical) with references
+- HUTUBS is not shipped: downloaded by the user to third_party/HUTUBS_HRTF_DATABASE/ (README.md there, ignored by git)
+- new folder auralization/hrtf_database: <get_hrtf_database>, <get_hrir>, <validate_hrtf_database>
+- DF and FF equalization filters for HUTUBS computed on the fly (< 1 s, once per subject): new <get_hrtf_df_equalization>
+  (no CTF provided with HUTUBS; reproduces the FABIAN CTF within 0.23 dB, 50 Hz - 16 kHz)
+- new AKtools files (unmodified) in third_party/AKtools/: AKhrirDatabase.m, AKfractionalDelayCyclic.m, AKkaiser.m
+
+ROBUSTNESS AND USABILITY
+
+- HRTF set checked before the rendering and printed in the log; equalization filters cached per HRTF set
+- <convert_binaural_equalization>: new optional input hrtf (pass the set of the rendering in post-processing scripts)
+
+CHANGES IN RESULTS
+
+- none with hrtf_database = FABIAN (DEFAULT)
+
+---------------------------------------------------------------------------------------------------------------------------------------
 ++ 18.11.2026 - time step of the input data
 
 BUG FIXES

@@ -39,14 +39,15 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   4') OUT.impulseResponse_direct and OUT.impulseResponse_reflected, applied
 %       separately to the delayed signal of each path in <apply_propagation>
 %
-% If binaural signals are to be generated, measured HRTFs from the FABIAN database
-% (DOI: 10.14279/depositonce-5718.5) are used (zero-degree HATO only). The aircraft
+% If binaural signals are to be generated, measured HRTFs (zero-degree HATO only) of the
+% HRTF set selected in the .ini file are used (<hrtf_database> = FABIAN (DEFAULT) or
+% HUTUBS with <hutubs_subject>, see <get_hrtf_database>). The aircraft
 % trajectory is indirectly accounted for by the incidence angles of the direct and
 % reflected eigenrays, previously computed in <get_propagation> and given as inputs here.
 % Please refer to <AKhrirInterpolation> for the angle convention used by FABIAN
-% (head-centered spherical coordinates). For each path:
+% (head-centered spherical coordinates; the same for HUTUBS). For each path:
 %   1.b) HRIRs are interpolated for the incidence angles (spherical-harmonics
-%        representation of the measured HRIRs, 44.1 kHz)
+%        representation of the measured HRIRs, 44.1 kHz, see <get_hrir>)
 %   2.b) HRIRs are resampled from 44.1 kHz to <fs> (frequency response preserved)
 %   3.b) optional high-frequency regularization of the HRIRs (internal flag
 %        <hrtf_regularization>, disabled by default; not combinable with
@@ -156,8 +157,10 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   (behaviour unchanged); <head_orientation> read and validated by <get_head_orientation>
 % Gil Felix Greco, Braunschweig 16.11.2026 - FIR filters per sound path without
 %   propagation delay for <doppler_method> = delay_line
+% Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set selectable in the .ini file
+%   (<hrtf_database>: FABIAN or HUTUBS), HRIRs obtained with <get_hrir>
 %
-%   AI disclosure (11.11.2026, 14.11.2026 and 16.11.2026 changes): Generative AI assistance
+%   AI disclosure (11.11.2026, 14.11.2026, 16.11.2026 and 19.11.2026 changes): Generative AI assistance
 %   (Anthropic Claude) was used to develop this code under the author's direction. All
 %   codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,8 +171,11 @@ global input_file
 if binaural_signal == 1
     head_orientation = get_head_orientation(); % <head_orientation> from <input_file>, DEFAULT 0
 
-    % sampling frequency of the FABIAN HRTF database
-    fs_hrir_db = 44100;
+    % HRTF set (<hrtf_database> in the .ini file, see <get_hrtf_database>)
+    hrtf = get_hrtf_database();
+
+    % sampling frequency of the HRTF database (44.1 kHz for FABIAN and HUTUBS)
+    fs_hrir_db = hrtf.fs;
 
     % ---------------------------------------------------------------------
     % OPTIONAL HRTF high-frequency magnitude regularization (see <regularize_hrir>)
@@ -379,10 +385,8 @@ end % if useDelayLine
 
 if binaural_signal == 1
 
-    % head-above-torso orientation, degrees
-    % (only one angle is of interest, but more are available in the FABIAN database)
-    HATO = 0;
-
+    % HRIRs of the measured HRTFs with HATO = 0 (head-above-torso orientation; more
+    % angles are available in the FABIAN database, but not used), see <get_hrir>
     fs_hrir = fs_hrir_db;
 
     % direct path
@@ -393,9 +397,9 @@ if binaural_signal == 1
     elevation_direct = input.spherical_angles_HRTF.direct_path(:,2);
 
     % get HRIRs
-    [HRIR_direct.leftEar, HRIR_direct.rightEar] = AKhrirInterpolation(azimuth_direct+head_orientation, elevation_direct, HATO, 'measured_sh');
+    [HRIR_direct.leftEar, HRIR_direct.rightEar] = get_hrir(azimuth_direct+head_orientation, elevation_direct, hrtf);
 
-    % resample HRIRs from the FABIAN sampling frequency (44.1 kHz) to <fs>
+    % resample HRIRs from the database sampling frequency (44.1 kHz) to <fs>
     HRIR_direct.leftEar  = il_resample_hrir( HRIR_direct.leftEar,  fs, fs_hrir );
     HRIR_direct.rightEar = il_resample_hrir( HRIR_direct.rightEar, fs, fs_hrir );
     nSamples_HRIR = size( HRIR_direct.leftEar, 1 );
@@ -427,9 +431,9 @@ if binaural_signal == 1
         elevation_reflected = input.spherical_angles_HRTF.reflected_path(:,2);
 
         % get HRIRs for reflected path
-        [HRIR_reflected.leftEar, HRIR_reflected.rightEar] = AKhrirInterpolation(azimuth_reflected+head_orientation, elevation_reflected, HATO, 'measured_sh');
+        [HRIR_reflected.leftEar, HRIR_reflected.rightEar] = get_hrir(azimuth_reflected+head_orientation, elevation_reflected, hrtf);
 
-        % resample HRIRs from the FABIAN sampling frequency (44.1 kHz) to <fs>
+        % resample HRIRs from the database sampling frequency (44.1 kHz) to <fs>
         HRIR_reflected.leftEar  = il_resample_hrir( HRIR_reflected.leftEar,  fs, fs_hrir );
         HRIR_reflected.rightEar = il_resample_hrir( HRIR_reflected.rightEar, fs, fs_hrir );
 
@@ -484,7 +488,7 @@ if considerGroundReflection == 1
         OUT.impulseResponse_binaural.leftEar =  ( impulseResponse_direct_binaural_leftEar + impulseResponse_reflected_binaural_leftEar );
         OUT.impulseResponse_binaural.rightEar =  ( impulseResponse_direct_binaural_rightEar + impulseResponse_reflected_binaural_rightEar );
 
-        % HRIRs from FABIAN - used for visualizytion only
+        % HRIRs (FABIAN or HUTUBS) - used for visualization only
         OUT.HRIR_direct = HRIR_direct;
         OUT.HRIR_reflected= HRIR_reflected;
     end
@@ -507,7 +511,7 @@ else % only direct path required
         OUT.impulseResponse_binaural.leftEar = ( impulseResponse_direct_binaural_leftEar );
         OUT.impulseResponse_binaural.rightEar = ( impulseResponse_direct_binaural_rightEar );
 
-        % HRIRs from FABIAN - used for visualizytion only
+        % HRIRs (FABIAN or HUTUBS) - used for visualization only
         OUT.HRIR_direct = HRIR_direct;
     end
 
@@ -584,7 +588,7 @@ end
 
     function HRIR_out = il_resample_hrir(HRIR_in, fs, fs_hrir)
         % resample HRIRs [Nsamples x Nblocks] from <fs_hrir> to <fs>.
-        % The FABIAN database is sampled at 44.1 kHz; without resampling, the
+        % The HRTF databases are sampled at 44.1 kHz; without resampling, the
         % HRIRs would be played back at the framework sampling frequency,
         % shifting all spectral features by fs/fs_hrir and scaling all ITDs
         % by fs_hrir/fs.

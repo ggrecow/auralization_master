@@ -1,5 +1,5 @@
-function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo )
-% function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo )
+function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo, hrtf )
+% function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo, hrtf )
 %
 % Converts a binaural signal with one HRTF equalization (<eqFrom>) into the
 % signal that would have been rendered with another one (<eqTo>), without
@@ -10,7 +10,12 @@ function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo
 % to compute metrics (LAmax, LAE, EPNL, ECMA-418-2 loudness, ...) from the FF
 % version of the stimuli of a listening test:
 %
-%   y_ff = convert_binaural_equalization( y_bin, fs, 'none', 'FF' );
+%   y_ff = convert_binaural_equalization( y_bin, fs, 'none', 'FF' );                % FABIAN
+%   y_ff = convert_binaural_equalization( y_bin, fs, 'none', 'FF', ...
+%                                         get_hrtf_database( 'HUTUBS', 26 ) );    % HUTUBS pp26
+%
+% The HRTF set MUST be the one used for the rendering (<hrtf_database> and
+% <hutubs_subject> in the .ini file, also printed in the log.txt of the run).
 %
 % Why this is exact (up to filter design tolerances):
 %   - all equalizations ('none', 'DF', 'FF') are fixed, linear and time-invariant
@@ -31,12 +36,17 @@ function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo
 %   fs     : sampling frequency of y_in, Hz
 %   eqFrom : equalization of y_in   ('none', 'DF' or 'FF')
 %   eqTo   : desired equalization  ('none', 'DF' or 'FF')
+%   hrtf   : HRTF set used for the rendering, struct from <get_hrtf_database>
+%            (DEFAULT: get_hrtf_database(), i.e. the set of the .ini file of the
+%            last run, or FABIAN if no .ini file was read). Pass it explicitly
+%            in post-processing scripts.
 %
 % OUTPUTS
 %   y_out  : [N x 2] converted binaural signal (same length as y_in)
 %   h_conv : struct with the conversion filters at fs (.left, .right)
 %
 % Author: Gil Felix Greco, Braunschweig 11.11.2026
+% Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set as input (FABIAN or HUTUBS)
 %
 %   AI disclosure: Generative AI assistance (Anthropic Claude) was used to
 %   develop this code under the author's direction. All codes were verified
@@ -45,6 +55,10 @@ function [y_out, h_conv] = convert_binaural_equalization( y_in, fs, eqFrom, eqTo
 
 if size( y_in, 2 ) ~= 2
     error( 'convert_binaural_equalization:input', 'y_in must be a [N x 2] binaural signal.' );
+end
+
+if nargin < 5 || isempty( hrtf )
+    hrtf = get_hrtf_database();
 end
 
 eqFrom = il_check_type( eqFrom );
@@ -56,8 +70,8 @@ if strcmp( eqFrom, eqTo )
     return
 end
 
-EQf = get_hrtf_equalization_filter( eqFrom );
-EQt = get_hrtf_equalization_filter( eqTo );
+EQf = get_hrtf_equalization_filter( eqFrom, hrtf );
+EQt = get_hrtf_equalization_filter( eqTo,   hrtf );
 fs_hrir = EQf.fs;
 
 % design grid at the database fs, fine enough for the step-like FF filters

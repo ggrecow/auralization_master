@@ -7,3 +7,6 @@ input_data/auralization_input_without_doppler.dat
 *.mat
 !third_party/FABIAN_HRTF_DATABASE_v4/*.mat
 output_data_test_*/
+# HUTUBS HRTF database: downloaded by the user, not redistributed
+third_party/HUTUBS_HRTF_DATABASE/*
+!third_party/HUTUBS_HRTF_DATABASE/README.md

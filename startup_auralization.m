@@ -15,7 +15,7 @@ function startup_auralization(bp)
 % Institution: Technische Universität Braunschweig
 %
 % Date created: 20.11.2024
-% Date last modified: 27.10.2026
+% Date last modified: 19.11.2026
 % MATLAB version: 2024b
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -33,6 +33,7 @@ addpath(bp);
 
 main_dirs = { 'auralization', ...
               ['auralization' filesep 'coherence_loss'], ...
+              ['auralization' filesep 'hrtf_database'], ...
               ['auralization' filesep 'hrtf_equalization'], ...
               ['auralization' filesep 'doppler'], ...
               'utilities' };
@@ -100,6 +101,16 @@ HRTF = [bp 'third_party' filesep 'FABIAN_HRTF_DATABASE_v4' filesep];
 bAdd = ~exist('FABIAN_HRIR_measured_HATO_0.m','file');
 if bAdd
     addpath(HRTF);
+end
+
+%% add data from HUTUBS HRTF database (optional, not shipped)
+% Only needed for <hrtf_database> = HUTUBS in the .ini file. Download the database from
+% https://doi.org/10.14279/depositonce-8487 and extract HRIRs.zip to
+% third_party/HUTUBS_HRTF_DATABASE/ (see the README.md there). Subfolders are added too.
+
+HUTUBS = [bp 'third_party' filesep 'HUTUBS_HRTF_DATABASE'];
+if exist(HUTUBS,'dir')
+    addpath(genpath(HUTUBS));
 end
 
 end
