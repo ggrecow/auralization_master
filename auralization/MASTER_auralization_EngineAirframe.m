@@ -49,8 +49,11 @@ function OutputAuralization = MASTER_auralization_EngineAirframe(input, flight_p
 %
 % Gil Felix Greco, Braunschweig 18.11.2026 - time step of the input data estimated from all time
 %   steps (<get_time_step>) instead of the first difference of the (rounded) time values
+% Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set (<hrtf_database>: FABIAN or HUTUBS, see
+%   <get_hrtf_database>) read and printed before the rendering, and passed to
+%   <convert_binaural_equalization>
 %
-%   AI disclosure (14.11.2026, 16.11.2026 and 18.11.2026 changes): Generative AI assistance
+%   AI disclosure (14.11.2026, 16.11.2026, 18.11.2026 and 19.11.2026 changes): Generative AI assistance
 %   (Anthropic Claude) was used to develop this code under the author's direction. All codes
 %   were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -95,6 +98,24 @@ if isfield( input_file, 'hrtf_df_equalization' )
     fprintf(['\n- NOTE: <hrtf_df_equalization> in the .ini file is no longer used and is ignored. ' ...
              'The binaural signal is always rendered with the measured HRTFs; use ' ...
              '<generate_equalized_binaural> = 1 to also obtain DF and FF equalized versions.\n']);
+end
+
+% HRTF set of the binaural rendering (<hrtf_database>, <hutubs_subject>, see <get_hrtf_database>).
+% Read and checked here (e.g. HUTUBS files available), before the time-consuming rendering.
+if binaural_signal == 1
+    hrtf = get_hrtf_database();
+    fprintf( '\n- HRTFs: %s (measured, HATO = 0, %g kHz). %s\n', hrtf.name, hrtf.fs/1000, hrtf.reference );
+    if strcmp( hrtf.database, 'HUTUBS' )
+        if any( hrtf.subject == [1 96] )
+            fprintf( ['  NOTE: HUTUBS pp%d is the FABIAN head-and-torso simulator, measured within the ' ...
+                      'HUTUBS database (not identical to hrtf_database = FABIAN).\n'], hrtf.subject );
+        end
+        if generate_equalized_binaural == 1
+            fprintf( '  DF and FF equalization filters are designed from the %s data.\n', hrtf.name );
+        end
+    elseif isfield( input_file, 'hutubs_subject' )
+        fprintf( '  NOTE: <hutubs_subject> is only used with hrtf_database = HUTUBS and is ignored.\n' );
+    end
 end
 
 % Doppler method (see <get_doppler_method>), read and validated before the rendering.
@@ -319,12 +340,12 @@ if binaural_signal == 1 % <- binaural truncated to zero for engineSignal and air
     if generate_equalized_binaural == 1
 
         OutputAuralization.overallSignal_binaural_DFeq = convert_binaural_equalization( ...
-            overallSignal.outputSignal_binaural, fs, 'none', 'DF' );
+            overallSignal.outputSignal_binaural, fs, 'none', 'DF', hrtf );
         fileTag = '_overallSignal_binaural_DFeq';
         save_wav( OutputAuralization.overallSignal_binaural_DFeq, fs, AttenuationdB, fileTag, tag_auralization );
 
         OutputAuralization.overallSignal_binaural_FFeq = convert_binaural_equalization( ...
-            overallSignal.outputSignal_binaural, fs, 'none', 'FF' );
+            overallSignal.outputSignal_binaural, fs, 'none', 'FF', hrtf );
         fileTag = '_overallSignal_binaural_FFeq';
         save_wav( OutputAuralization.overallSignal_binaural_FFeq, fs, AttenuationdB, fileTag, tag_auralization );
 
@@ -436,7 +457,7 @@ end
 
 function il_check_sampling_frequency( fs, binaural_signal )
 % Checks <sampling_freq> from the .ini file:
-%   - fs >= 44.1 kHz (error otherwise): the HRIRs (FABIAN, 44.1 kHz) and the
+%   - fs >= 44.1 kHz (error otherwise): the HRIRs (FABIAN and HUTUBS, 44.1 kHz) and the
 %     synthesis would lose high-frequency content, which biases the metrics
 %   - (fs*dt is always a multiple of 10 samples, as needed by the broadband synthesis:
 %     dt is rounded in <get_time_step>)
@@ -460,7 +481,7 @@ if fs > 48000
 end
 
 if binaural_signal == 1 && fs ~= 44100
-    fprintf( ['\n- NOTE: <sampling_freq> = %g Hz: the FABIAN HRIRs (44.1 kHz) are resampled. The ' ...
+    fprintf( ['\n- NOTE: <sampling_freq> = %g Hz: the HRIRs (44.1 kHz) are resampled. The ' ...
               'binaural signals contain no energy above 22.05 kHz, the mono signal does (up to ' ...
               '%g kHz). Irrelevant for A-weighted levels, EPNL and loudness; consider it when ' ...
               'comparing unweighted levels of mono and binaural signals.\n'], fs, fs/2000 );

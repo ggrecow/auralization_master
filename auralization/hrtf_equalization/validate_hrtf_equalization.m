@@ -1,7 +1,8 @@
 % validate_hrtf_equalization.m
 %
-% Verification of the free-field (FF) equalization of the FABIAN HRTFs and of
-% the conversion between equalizations (<convert_binaural_equalization>).
+% Verification of the free-field (FF) equalization of an HRTF set (FABIAN by
+% default; set <hrtf> below to check a HUTUBS subject) and of the conversion
+% between equalizations (<convert_binaural_equalization>).
 % The rendering chain of <get_FIR> + <overlapp_add_convolution> is reproduced
 % here in a minimal form (HRIR -> equalization at 44.1 kHz -> resampling ->
 % block convolution), without ray tracing.
@@ -19,8 +20,11 @@
 % Results (MATLAB, 13.11.2026), third-octave bands 50 Hz - 12.5 kHz:
 % 1) max |dL| = 0.02 dB; 2) max |dL| = 0.11 dB; 3) max |dL| = 0.05 dB per band,
 % |dLAeq| < 0.07 dB; 4) max |dL| = 0.007 dB per band, |dLAeq| < 0.003 dB.
+% For HUTUBS, see also <validate_hrtf_database>.
 %
 % Author: Gil Felix Greco, Braunschweig 13.11.2026
+% Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set selectable (<hrtf>: FABIAN or
+%   HUTUBS); HRIRs from <get_hrir>
 %
 %   AI disclosure: Generative AI assistance (Anthropic Claude) was used to
 %   develop this code under the author's direction. All codes were verified
@@ -31,11 +35,15 @@ clear; clc;
 
 do_plot = 1;        % 1: plot the filters (step 5)
 fs      = 48000;    % framework sampling frequency used in steps 3 and 4
-fs_hrir = 44100;    % FABIAN
 
-EQ.none = get_hrtf_equalization_filter( 'none' );
-EQ.DF   = get_hrtf_equalization_filter( 'DF' );
-EQ.FF   = get_hrtf_equalization_filter( 'FF' );
+hrtf    = get_hrtf_database( 'FABIAN' );        % HRTF set to check, e.g. get_hrtf_database( 'HUTUBS', 26 )
+fs_hrir = hrtf.fs;                              % 44.1 kHz
+
+EQ.none = get_hrtf_equalization_filter( 'none', hrtf );
+EQ.DF   = get_hrtf_equalization_filter( 'DF',   hrtf );
+EQ.FF   = get_hrtf_equalization_filter( 'FF',   hrtf );
+fprintf( 'HRTF set: %s\n', hrtf.name );
+fprintf( 'DF filter: %s (%d taps)\n', EQ.DF.source, numel(EQ.DF.left) );
 fprintf( 'FF filters: %s (%d taps)\n', EQ.FF.source, numel(EQ.FF.left) );
 
 fc  = 1000 * 2.^( (-13:11)/3 );     % third-octave bands 50 Hz - 12.5 kHz
@@ -44,7 +52,7 @@ lev = @(P, f) arrayfun( @(k) 10*log10( sum( P( f >= fc(k)*2^(-1/6) & f < fc(k)*2
 %% 1) frontal HRTF x FF filter
 N  = 2^16;
 f  = (0:N/2)' * fs_hrir/N;
-[h0L, h0R] = AKhrirInterpolation( 0, 0, 0, 'measured_sh' );
+[h0L, h0R] = get_hrir( 0, 0, hrtf );
 P0L = abs( fft( h0L, N ) ).^2;           P0L = P0L(1:N/2+1);
 P0R = abs( fft( h0R, N ) ).^2;           P0R = P0R(1:N/2+1);
 EL  = abs( fft( EQ.FF.left,  N ) ).^2;   EL  = EL(1:N/2+1);
@@ -55,7 +63,7 @@ fprintf( '\n1) frontal HRTF x FF filter, band levels (L, R): max |dL| = %.3f dB\
 %% 2) other directions: FF equalized HRTF vs. band-wise referencing
 az = [ 0  0 90 180  0 45 270];
 el = [90 45  0   0 -30 30  0];
-[hL, hR] = AKhrirInterpolation( az, el, 0, 'measured_sh' );
+[hL, hR] = get_hrir( az, el, hrtf );
 PL = abs( fft( hL, N ) ).^2;  PL = PL(1:N/2+1,:);
 PR = abs( fft( hR, N ) ).^2;  PR = PR(1:N/2+1,:);
 fprintf( '\n2) FF equalized HRTF vs. band-wise referencing |H|^2/|H0|^2 per band\n' );
@@ -71,7 +79,7 @@ dt = 0.1;  nT = 30;  BL = round( fs*dt );
 rng( 1 );  x = randn( BL*nT, 1 );            % white noise source signal
 
 % 3) frontal source, direct path only, constant delay
-hrir = @(eq, a, e) il_hrir( a, e, EQ.(eq), fs, fs_hrir );
+hrir = @(eq, a, e) il_hrir( a, e, EQ.(eq), fs, fs_hrir, hrtf );
 [bL, bR] = hrir( 'FF', 0, 0 );
 y_ff = [ conv( x, bL ), conv( x, bR ) ];
 y_mono = [ x; zeros( size(y_ff,1) - numel(x), 1 ) ];
@@ -95,8 +103,8 @@ for m = 1:3
         y.(types{m})(idx,:) = y.(types{m})(idx,:) + [ conv( xk, bL ), conv( xk, bR ) ];
     end
 end
-y.none2FF = convert_binaural_equalization( y.none, fs, 'none', 'FF' );
-y.DF2FF   = convert_binaural_equalization( y.DF,   fs, 'DF',   'FF' );
+y.none2FF = convert_binaural_equalization( y.none, fs, 'none', 'FF', hrtf );
+y.DF2FF   = convert_binaural_equalization( y.DF,   fs, 'DF',   'FF', hrtf );
 fprintf( '\n4) flyover, FF while rendering vs. FF by post-filter conversion\n' );
 for src = {'none2FF', 'DF2FF'}
     a = y.(src{1});  b = y.FF;
@@ -112,22 +120,22 @@ fprintf( '   LAeq binaural - LAeq mono (L, R): none %+.1f %+.1f | DF %+.1f %+.1f
 %% 5) figure
 if do_plot
     D  = abs( fft( EQ.DF.left, N ) );  D = D(1:N/2+1);
-    figure( 'Name', 'FABIAN HRTF equalization' );
+    figure( 'Name', [hrtf.name ' HRTF equalization'] );
     semilogx( f, 10*log10(P0L), f, 10*log10(P0R), f, 20*log10(D), '--', ...
               f, 10*log10(EL), ':', f, 10*log10(ER), ':' );
     grid on; xlim( [50 20000] ); ylim( [-25 25] );
     xlabel( 'Frequency (Hz)' ); ylabel( 'Magnitude (dB)' );
     legend( 'frontal HRTF, left', 'frontal HRTF, right', 'DF filter (inverted CTF)', ...
             'FF filter, left', 'FF filter, right', 'Location', 'southwest' );
-    title( 'FABIAN (HATO 0): frontal HRTF and equalization filters' );
+    title( [hrtf.name ' (HATO 0): frontal HRTF and equalization filters'] );
 end
 
 %% local functions
-function [bL, bR] = il_hrir( az, el, EQ, fs, fs_hrir )
+function [bL, bR] = il_hrir( az, el, EQ, fs, fs_hrir, hrtf )
 % HRIR processing as in <get_FIR> (interpolation, resampling with preserved
 % frequency response), plus an equalization of the HRIRs (full linear
 % convolution) to build the reference renderings
-[bL, bR] = AKhrirInterpolation( az, el, 0, 'measured_sh' );
+[bL, bR] = get_hrir( az, el, hrtf );
 bL = conv( bL, EQ.left );  bR = conv( bR, EQ.right );
 if fs ~= fs_hrir
     bL = resample( bL, fs, fs_hrir ) * fs_hrir/fs;

@@ -8,8 +8,8 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 % the <inputSignal> using uniformelly partitioned circular convolution.
 %
 % If required, generates stereo (binaural) signals using measured HRTFs 
-% from FABIAN database (zero-degree HATO) (DOI:
-% 10.14279/depositonce-5718.5) . See <get_FIR.m> function for more details. 
+% (zero-degree HATO) from the FABIAN (DEFAULT) or HUTUBS database
+% (<hrtf_database> in the .ini file). See <get_FIR.m> function for more details. 
 % 
 % INPUT:
 %       inputSignal : [N x 1] vector

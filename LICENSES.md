@@ -49,3 +49,11 @@ under their own respective licenses.
 - **Link:** https://depositonce.tu-berlin.de/items/3b423df7-a764-4ce1-9065-4e6034bba759  
 - **Note:** Attribution is required when using this dataset.  
 - **Derived files (not part of the original database):** `FABIAN_CTF_measured_inverted_smoothed.mat` (CTF converted from SOFA, `utilities/convert_FABIAN_CTF_sofa2mat.m`) and `FABIAN_FF_equalization_measured_HATO_0.mat` (free-field equalization filters designed from the measured HRTFs, `utilities/generate_FABIAN_FF_equalization_mat.m`).  
+
+---
+
+## HUTUBS HRTF Database (not distributed)
+- **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)  
+- **Authors:** Brinkmann, Fabian; Dinakaran, Manoj; Pelzer, Robert; Wohlgemuth, Jan Joschka; Seipel, Fabian; Weinzierl, Stefan  
+- **DOI:** [10.14279/depositonce-8487](https://doi.org/10.14279/depositonce-8487)  
+- **Note:** Optional (`hrtf_database = HUTUBS` in the `.ini` file). Not distributed with this software: it must be downloaded by the user and placed in `third_party/HUTUBS_HRTF_DATABASE/` (see the README.md there). Attribution is required when using this dataset.

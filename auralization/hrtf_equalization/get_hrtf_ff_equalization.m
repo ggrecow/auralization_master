@@ -1,9 +1,10 @@
 function FF = get_hrtf_ff_equalization( opts )
 % function FF = get_hrtf_ff_equalization( opts )
 %
-% Designs the free-field (FF) equalization filters of the FABIAN HRTFs: the
-% inverted, minimum-phase FRONTAL HRTF (azimuth = 0 deg, elevation = 0 deg,
-% head-centred coordinates of <AKhrirInterpolation>), one filter per ear.
+% Designs the free-field (FF) equalization filters of an HRTF set (FABIAN by
+% default, or HUTUBS, see <get_hrtf_database>): the inverted, minimum-phase
+% FRONTAL HRTF (azimuth = 0 deg, elevation = 0 deg, head-centred coordinates of
+% <AKhrirInterpolation>), one filter per ear.
 %
 % It is the free-field counterpart of the inverted CTF used for the
 % diffuse-field (DF) equalization: same idea (invert, minimum phase), but
@@ -28,17 +29,21 @@ function FF = get_hrtf_ff_equalization( opts )
 % playback, use raw HRTFs + measured headphone filter, or DF equalized HRTFs
 % with diffuse-field equalized headphones (see README, Sect. 1.4).
 %
-% This function is normally NOT called during the auralization: the filters
-% are precomputed with utilities/generate_FABIAN_FF_equalization_mat.m and
-% shipped in third_party/FABIAN_HRTF_DATABASE_v4/ (as for the CTF). It is
-% called on the fly only if that .mat file is missing (see
-% <get_hrtf_equalization_filter>). The FF equalized binaural signal is
+% For FABIAN, this function is normally NOT called during the auralization: the
+% filters are precomputed with utilities/generate_FABIAN_FF_equalization_mat.m
+% and shipped in third_party/FABIAN_HRTF_DATABASE_v4/ (as for the CTF). It is
+% called on the fly only if that .mat file is missing. For HUTUBS, the filters
+% are always designed on the fly, once per subject and MATLAB session (see
+% <get_hrtf_equalization_filter>; takes well below 1 s). The FF equalized binaural signal is
 % obtained from the rendered (non-equalized) signal with
 % <convert_binaural_equalization>.
 %
 % INPUT (all fields optional)
+%   opts.hrtf         : HRTF set, struct from <get_hrtf_database>
+%                       (default: get_hrtf_database('FABIAN'))
 %   opts.HATO         : head-above-torso orientation, deg            (default 0)
-%   opts.fs_hrir      : sampling frequency of the FABIAN data, Hz    (default 44100)
+%                       (FABIAN only; must be 0 for HUTUBS)
+%   opts.fs_hrir      : sampling frequency of the HRTF data, Hz      (default opts.hrtf.fs = 44100)
 %   opts.nfft         : FFT length used for the design               (default 16384)
 %   opts.method       : how the frontal reference |H0| is inverted   (default 'band')
 %       'band'  -> smooth filter whose gain is set per third-octave band, so that
@@ -62,7 +67,7 @@ function FF = get_hrtf_ff_equalization( opts )
 %                       to 0 dB over half an octave (raised cosine)
 %   opts.max_boost_dB : maximum gain of the inverse filter, dB       (default 20)
 %                       (limits the boost at deep pinna notches)
-%   opts.nTaps        : length of the FIR filters, samples           (default 1024)
+%   opts.nTaps        : length of the FIR filters, samples           (default 2048)
 %
 % OUTPUT
 %   FF : struct with fields
@@ -72,12 +77,16 @@ function FF = get_hrtf_ff_equalization( opts )
 %     .H0_left/.H0_right: smoothed magnitude of the frontal HRTF (linear)
 %     .G_left/.G_right  : target magnitude of the filters (linear), i.e. the
 %                         inverse of H0 with boost limit and band fades
-%     .settings         : the options used (for documentation)
+%     .settings         : the options used (for documentation); .settings.hrtf
+%                         is the name of the HRTF set (e.g. 'FABIAN', 'HUTUBS pp26')
 %
-% REQUIREMENTS: AKtools (AKhrirInterpolation) and the FABIAN SH data
-% (FABIAN_HRIR_measured_HATO_0.mat), both shipped with the framework.
+% REQUIREMENTS: AKtools and the HRTF data: FABIAN (AKhrirInterpolation,
+% FABIAN_HRIR_measured_HATO_0.mat, both shipped with the framework) or HUTUBS
+% (AKhrirDatabase and ppN_SHcoefficients_measured.mat, see <get_hrtf_database>).
 %
 % Author: Gil Felix Greco, Braunschweig 11.11.2026
+% Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set as input (opts.hrtf: FABIAN
+%   or HUTUBS); default nTaps in the header corrected (2048, as in the code)
 %
 %   AI disclosure: Generative AI assistance (Anthropic Claude) was used to
 %   develop this code under the author's direction. All codes were verified
@@ -86,7 +95,12 @@ function FF = get_hrtf_ff_equalization( opts )
 
 %% default options
 if nargin < 1 || isempty( opts ), opts = struct(); end
-defaults = struct( 'HATO', 0, 'fs_hrir', 44100, 'nfft', 16384, 'method', 'band', ...
+if ~isfield( opts, 'hrtf' ) || isempty( opts.hrtf )
+    opts.hrtf = get_hrtf_database( 'FABIAN' );
+end
+hrtf = opts.hrtf;
+opts = rmfield( opts, 'hrtf' );
+defaults = struct( 'HATO', 0, 'fs_hrir', hrtf.fs, 'nfft', 16384, 'method', 'band', ...
                    'f_lo', 50, 'f_hi', 16000, 'max_boost_dB', 20, 'nTaps', 2048, 'nIter', 50, 'trans_oct', 0 );
 names = fieldnames( defaults );
 for k = 1:numel( names )
@@ -98,16 +112,31 @@ end
 if mod( opts.nfft, 2 ) ~= 0 || opts.nTaps > opts.nfft
     error( 'get_hrtf_ff_equalization:nfft', 'nfft must be even and >= nTaps.' );
 end
+if opts.fs_hrir ~= hrtf.fs
+    error( 'get_hrtf_ff_equalization:fs', ...
+        'opts.fs_hrir (%g Hz) differs from the sampling frequency of %s (%g Hz).', ...
+        opts.fs_hrir, hrtf.name, hrtf.fs );
+end
 
 %% frontal HRIRs, same spherical-harmonics representation as used in <get_FIR>
-[h0L, h0R] = AKhrirInterpolation( 0, 0, opts.HATO, 'measured_sh' );
+switch hrtf.database
+    case 'FABIAN'
+        [h0L, h0R] = AKhrirInterpolation( 0, 0, opts.HATO, 'measured_sh' );
+    otherwise
+        if opts.HATO ~= 0
+            error( 'get_hrtf_ff_equalization:HATO', ...
+                'opts.HATO must be 0 for %s (HATO is only available for FABIAN).', hrtf.name );
+        end
+        [h0L, h0R] = get_hrir( 0, 0, hrtf );
+end
 
 [FF.left,  FF.H0_left,  FF.G_left,  f] = il_design( h0L, opts );
 [FF.right, FF.H0_right, FF.G_right]    = il_design( h0R, opts );
 
-FF.fs       = opts.fs_hrir;
-FF.f        = f;
-FF.settings = opts;
+FF.fs            = opts.fs_hrir;
+FF.f             = f;
+FF.settings      = opts;
+FF.settings.hrtf = hrtf.name;
 
 end
 

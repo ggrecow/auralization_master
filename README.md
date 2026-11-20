@@ -60,10 +60,19 @@ Example for the homogeneous-atmosphere case in [input_data](input_data/example_h
 
 ## 1.4 Receiver model
 
-The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database [7]. 
+The simpliest case is that of an omnidirectional microphone (with 0 dB gain for all frequencies). This is the default case, for which **monoaural diotic** .WAV files are obtained at the receiver positions. A human receiver can also be considered using **Head-Related Transfer Functions (HRTF)** to account for sound propagation effects caused by the interaction of sound with human body parts. In this case, binaural sound signals are rendered using HRTFs from the FABIAN database [7, 11] (DEFAULT) or, optionally, from the HUTUBS database [12, 13]. 
 
 Only measured HRTFs with zero-degree **Head-above Torso Orientation (HATO)** are considered in this work, meaning the head is aligned with the torso without any additional rotation in yaw, pitch or roll (i.e., looking
 straight ahead and not tilted up, down, or to the side, with ears at the same height). The output audio after binaural rendering is **stereo (one channel per ear)**, representing **binaural-dichotic signals**. The HRTFs are evaluated for the direction from which each eigenray (direct and ground-reflected) **arrives at the receiver**, taken from the ray-tracing wavefront normal at the receiver (with refraction and wind, this differs from the launch direction at the source, which describes the emission direction).
+
+**HRTF database.** The HRTF set is selected with `hrtf_database` in the `.ini` file:
+
+| `hrtf_database` | head | data | shipped |
+|---|---|---|---|
+| `FABIAN` (DEFAULT) | FABIAN head-and-torso simulator, measured in Oldenburg [7, 11] | measured, SH order 35 | yes (`third_party/FABIAN_HRTF_DATABASE_v4/`) |
+| `HUTUBS` | one of 96 subjects (`hutubs_subject`): 93 humans and FABIAN, measured at TU Berlin [12, 13] | measured, SH order 16 | no: download it to `third_party/HUTUBS_HRTF_DATABASE/` (see the README.md there) |
+
+Both give the HRTFs at the blocked ear-canal entrance, referenced to the sound pressure at the centre of the head with the head absent, at 44.1 kHz and in the same coordinates, so they can be compared directly. Note that HUTUBS subjects 1 and 96 are FABIAN measured with the HUTUBS system: they differ from `hrtf_database = FABIAN` by less than 1 dB up to 8 kHz and up to 3 dB at 20 kHz [12]. For HUTUBS, the DF equalization filter (no CTF is provided with the database) and the FF equalization filters are computed from the HRTFs of the subject; the method used for the DF filter reproduces the FABIAN CTF within 0.3 dB between 50 Hz and 16 kHz (`validate_hrtf_database()`). See the `.ini` files for further differences between both databases.
 
 **Head orientation.** The head is rotated in the horizontal plane with `head_orientation` (degrees, DEFAULT 0). It is a **fixed yaw in the x-y plane of the coordinate system of the input data (PANAM)**: the same for all receivers, and the head does **not** follow the aircraft. The HRTFs are evaluated at the arrival azimuth (0° = +x, 90° = +y) plus `head_orientation`, so increasing values turn the head clockwise seen from above. For a flight towards +x (PANAM approach and departure) and a receiver below the flight track (y = 0):
 
@@ -76,7 +85,7 @@ straight ahead and not tilted up, down, or to the side, with ears at the same he
 
 For a flight towards −x, front/back and left/right are swapped. For a lateral receiver, the aircraft passes on one side of the head; for example, with `head_orientation = 0` and a receiver at y > 0, the aircraft is heard from back → right ear → front. To face the flight track, use 90 (receiver at y > 0) or 270 (receiver at y < 0). The HRTF angles of the direct path at the first and last time step are printed in the log (`log.txt`) for each receiver, so the orientation can be checked there.
 
-**Binaural signals: listening vs. metrics.** The FABIAN HRTFs are measured at the blocked ear-canal entrance and therefore contain the outer-ear response. The binaural signal is rendered with these HRTFs. With `generate_equalized_binaural = 1`, two equalized versions of the same rendering are saved as well:
+**Binaural signals: listening vs. metrics.** The HRTFs (FABIAN and HUTUBS) are measured at the blocked ear-canal entrance and therefore contain the outer-ear response. The binaural signal is rendered with these HRTFs. With `generate_equalized_binaural = 1`, two equalized versions of the same rendering are saved as well:
 
 | file | reference | use for |
 |---|---|---|
@@ -125,6 +134,12 @@ In the original version of the framework (v1.0), the Doppler effect is included 
 
 [10] V. E. Ostashev, D. J. Breton, and D. K. Wilson, Interference of the direct and ground-reflected waves in the atmosphere with volumetric scattering, J. Acoust. Soc. Am., vol. 156, no. 1, pp. 107–118, 2024. DOI: [10.1121/10.0026452](https://doi.org/10.1121/10.0026452)
 
+[11] F. Brinkmann, A. Lindau, S. Weinzierl, S. van de Par, M. Müller-Trapet, R. Opdam, and M. Vorländer, A high resolution and full-spherical head-related transfer function database for different head-above-torso orientations, J. Audio Eng. Soc., vol. 65, no. 10, pp. 841–848, 2017. DOI: [10.17743/jaes.2017.0033](https://doi.org/10.17743/jaes.2017.0033)
+
+[12] F. Brinkmann, M. Dinakaran, R. Pelzer, P. Grosche, D. Voss, and S. Weinzierl, A cross-evaluated database of measured and simulated HRTFs including 3D head meshes, anthropometric features, and headphone impulse responses, J. Audio Eng. Soc., vol. 67, no. 9, pp. 705–718, 2019. DOI: [10.17743/jaes.2019.0024](https://doi.org/10.17743/jaes.2019.0024)
+
+[13] F. Brinkmann, M. Dinakaran, R. Pelzer, J. J. Wohlgemuth, F. Seipel, and S. Weinzierl, The HUTUBS head-related transfer function (HRTF) database, Data repository, 2019. DOI: [10.14279/depositonce-8487](https://doi.org/10.14279/depositonce-8487)
+
 # 2. Framework architecture / Algorithmic overview
 
 A high-level description of the code structure and input data is provided here.
@@ -155,10 +170,11 @@ Exemplary input data is provided in the [input_data](input_data/) folder. The tw
          - `apply_propagation()` : main function used to apply sound propagation effects on synthesized sound signals of aircraft (emissions + Doppler effect)
             - `get_doppler_mapping()` / `apply_doppler_delay_line()` : Doppler effect (and convective amplification) per sound path by variable delay lines (only if `doppler_method = delay_line`)
             - `get_FIR()` : get **Finite Impulse Response (FIR)** filters associated with atmospheric transfer functions and HRTFs (if required)
+               - `get_hrtf_database()` / `get_hrir()` : HRTF set of the `.ini` file (`hrtf_database`: FABIAN or HUTUBS) and its HRIRs for the arrival directions
                - `get_decorrelation_filter()` : random-phase decorrelation filters for the reflected path (if coherence loss is considered)
             - `overlapp_add_convolution()` : apply FIR in the synthesized signals using the overlapp and add method (i.e., DFT-based block convolution)
          - `save_wav()` : export .WAV files for a desired full-scale 
-         - `convert_binaural_equalization()` : DF and FF equalized versions of the binaural signal (if `generate_equalized_binaural = 1`), using the filters of `get_hrtf_equalization_filter()` (`DF`: inverted FABIAN CTF; `FF`: inverted frontal HRTF, precomputed with `get_hrtf_ff_equalization()`); can also be used on finished binaural files
+         - `convert_binaural_equalization()` : DF and FF equalized versions of the binaural signal (if `generate_equalized_binaural = 1`), using the filters of `get_hrtf_equalization_filter()` (`DF`: inverted CTF, provided with the FABIAN database or computed for HUTUBS with `get_hrtf_df_equalization()`; `FF`: inverted frontal HRTF, `get_hrtf_ff_equalization()`, precomputed for FABIAN); can also be used on finished binaural files
 <!-- >   
 
 Main modules/folders
@@ -177,7 +193,7 @@ Optional: brief explanation of algorithmic logic, e.g., how HRTFs are applied, h
 
 2. After that, you need to add the relevant folders of the toolbox to the path of your MATLAB. Open and run the `startup_auralization.m` script to automatically perform this task. In order to avoid conflicts, the `startup_auralization.m` needs to be used every time MATLAB is (re)started. Note that third party software used by the framework are distributed (in original form) together with this package in the `third_party` folder. These are automatically installed using the `startup_auralization.m` code.  
    
-3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF equalization, coherence loss, Doppler method) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
+3. The `ex_run_auralization.m` code provides examples on how to call the auralization framework. All settings (atmosphere, ground, receiver model, HRTF database and equalization, coherence loss, Doppler method) are defined and documented in the `.ini` files of the [input_data](input_data/) examples.  Results (`.wav` files, figures and a `log.txt` of the run) are saved in a `results_auralization` folder, with one subfolder per receiver. Saving figures can be turned off with `save_figs = 0` in the `.ini` file; the `.wav` files are always saved.
      
 <!-- >  Installation instructions (dependencies, setup).
 

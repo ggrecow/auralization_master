@@ -49,7 +49,8 @@ function auralization_master(main_input_path_in, tag, input_file_path, results_p
 %       describing the aircraft noise on the ground).
 %
 %   5) optionally, a binaural (stereo) version of the overall aircraft signal is
-%       generated using the measured HRTFs of the FABIAN database, considering the
+%       generated using the measured HRTFs of the FABIAN (DEFAULT) or HUTUBS database
+%       (<hrtf_database> in the .ini file), considering the
 %       arrival directions of the eigenrays at the receiver (ray tracing) and the head
 %       orientation defined in the <input_file.ini>. <head_orientation> is a fixed yaw
 %       of the head in the x-y plane of the PANAM coordinate system (same for all

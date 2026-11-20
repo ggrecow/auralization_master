@@ -1,7 +1,7 @@
 function PLOT_HRIR_spectrogram(input_direct, input_reflected, dt_panam, tag_title, tag_auralization, tag_save)
 % function PLOT_HRIR_spectrogram(input_direct, input_reflected, dt_panam, tag_title, tag_auralization, tag_save)
 %
-% Plots the HRIRs (FABIAN) applied to the direct and ground-reflected sound
+% Plots the HRIRs (FABIAN or HUTUBS) applied to the direct and ground-reflected sound
 % paths over time, for the left and right ears (2x2 layout).
 %
 % If <input_reflected> is empty (consider_ground_reflection = 0, i.e. no
