@@ -73,8 +73,9 @@ function outputSignal = apply_propagation(inputSignal, inputRayTracing, binaural
 % 01.04.2025, included binaural rendering capabilities. The HRTFs are applied individually to the 
 % direct and reflected sound paths.
 % 16.11.2026, Doppler effect by variable delay lines (<doppler_method> = delay_line)
+% 25.11.2026, plots of the FIR filters (<get_FIR>) only for the overall signal and only if <show>
 %
-%   AI disclosure (16.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
+%   AI disclosure (16.11.2026 and 25.11.2026 changes): Generative AI assistance (Anthropic Claude) was used
 %   to develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -166,7 +167,11 @@ if useCoherenceLoss
     end
 end
 
-FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, tag_auralization );
+% plots of the FIR filters only for the overall signal: the engine and airframe signals use
+% the same (mono) filters, so their plots would be identical (and saved under the same names)
+show_FIR = show && strcmp( tag_source, 'overallSignal' );
+
+FIR = get_FIR( inputRayTracing, fs, considerGroundReflection, binaural_signal, tag_auralization, show_FIR );
 
 %% apply FIRs to aircraft (emission+Doppler) signal using circular convolution
 
