@@ -25,7 +25,7 @@ if nargin < 3
     save_pdf = 0;
 end
 
-resolution = '-r600'; % Default resolution of 600 DPI
+resolution = '-r300'; % Default resolution of 300 DPI
 
 if save_mat_fig == 1 % always good to save, but it may use a LOT OF SPACE is used everytime
 

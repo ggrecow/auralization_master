@@ -50,6 +50,13 @@ function TonalSignal = tonalSynthesis(input, time_PANAM, time, show, tag_auraliz
 % and State University, 2012
 % 
 % Author: Gil Felix Greco, Braunschweig 20.06.2023
+% Gil Felix Greco, Braunschweig 25.11.2026 - envelopes interpolated and synthesized one tone at a
+%   time, instead of storing the envelopes of all tones in [tones x nSamples] matrices grown row by
+%   row (same result, bit-identical; for 201 buzzsaw tones and 20 s of signal approx. 30 s and
+%   4.6 GB less). The printed synthesis time now includes the interpolation
+%
+%   AI disclosure (25.11.2026 changes): Generative AI assistance (Anthropic Claude) was used to
+%   develop this code under the author's direction. All codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global pref   % specified in SQAT_auralization_master()
@@ -152,31 +159,10 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% translate amp and freq of the tones over time from panam to auralization time sampling
-% approach 2 interpolation (use this)
-
-for nTones = 1:tones % loop over the number of tones i-th source_time steps
-    
-    % 1) convert SPL to pressure --> 2) interpolate
-%     EnvelopeAmplitude(nTones,:) = interp1(time_PANAM,...
-%                                           sqrt(2).*pref.*10.^(tonesSPLTime(nTones,:)./20),...
-%                                           time,'linear','extrap'); % get sound pressure (amplitude) over time in auralization time from SPL (amplitude) provided by PANAM
-
-    % 1) interpolate --> 2) convert SPL to pressure
-    EnvelopeSPL(nTones,:) = interp1( time_PANAM, tonesSPLTime(nTones,:), time, 'linear', 'extrap' ); % get SPL over time in auralization time
-%     EnvelopeAmplitude(nTones,:) = sqrt(2).*pref.*10.^(EnvelopeSPL(nTones,:)./20); % get sound pressure (amplitude) over time in auralization time from SPL (amplitude) provided by PANAM
-    EnvelopeAmplitude(nTones,:) = sqrt(2)*sqrt(pref^2.*10.^(EnvelopeSPL(nTones,:)/10));
-    
-    EnvelopeFreq(nTones,:) = interp1(time_PANAM,tonesFreqTime(nTones,:),time,'linear','extrap'); % get freq over time in auralization time
-    
-end
-
-%%%% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% hold on;
-% subplot(2,1,1); plot(time,EnvelopeSPL,'o');
-% subplot(2,1,2); plot(time,EnvelopeFreq,'o');
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% approach 2 interpolation (use this), and
 %% sinthesize tonal components using additive synthesis
+% Each tone is interpolated to the auralization time sampling and synthesized in the same loop,
+% so only the envelopes of one tone are kept in memory (see header, 25.11.2026)
 tic;
 
 a=-pi; b=pi; % random number btw [-pi pi], use for a cos function
@@ -186,14 +172,33 @@ phase = (b-a).*rand(1,tones) + a; % create random phase vector
 
 kf = (2*pi)/fs; % modulation sensitivity for 1 Hz/Hz variation
 
+time = reshape( time, 1, [] );     % row vector (the tones are summed as row vectors)
 nSamples = length(time);           % number of samples to synthesise
 TonalSignal = zeros(1,nSamples);   % initialize output
 
 for nTones = 1:tones % loop over the number of tones i-th source_time steps
-    
-    currentTone = EnvelopeAmplitude(nTones,:).*... % amplitude of each tone, p(t) in Pascal
-                  cos(kf*cumsum(EnvelopeFreq(nTones,:)) + phase(nTones)); % freq of each tone
-    
+
+    % 1) convert SPL to pressure --> 2) interpolate
+%     EnvelopeAmplitude = interp1(time_PANAM,...
+%                                 sqrt(2).*pref.*10.^(tonesSPLTime(nTones,:)./20),...
+%                                 time,'linear','extrap'); % get sound pressure (amplitude) over time in auralization time from SPL (amplitude) provided by PANAM
+
+    % 1) interpolate --> 2) convert SPL to pressure
+    EnvelopeSPL = interp1( time_PANAM, tonesSPLTime(nTones,:), time, 'linear', 'extrap' ); % get SPL over time in auralization time
+%     EnvelopeAmplitude = sqrt(2).*pref.*10.^(EnvelopeSPL./20); % get sound pressure (amplitude) over time in auralization time from SPL (amplitude) provided by PANAM
+    EnvelopeAmplitude = sqrt(2)*sqrt(pref^2.*10.^(EnvelopeSPL/10));
+
+    EnvelopeFreq = interp1( time_PANAM, tonesFreqTime(nTones,:), time, 'linear', 'extrap' ); % get freq over time in auralization time
+
+    %%%% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % hold on;
+    % subplot(2,1,1); plot(time,EnvelopeSPL,'o');
+    % subplot(2,1,2); plot(time,EnvelopeFreq,'o');
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    currentTone = EnvelopeAmplitude.*... % amplitude of each tone, p(t) in Pascal
+                  cos(kf*cumsum(EnvelopeFreq) + phase(nTones)); % freq of each tone
+
     TonalSignal = TonalSignal + currentTone; % sum all tones
     
     %%%% check plot  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

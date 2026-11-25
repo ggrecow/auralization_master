@@ -1,5 +1,5 @@
-function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, tag_auralization )
-% function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, tag_auralization )
+function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, tag_auralization, show )
+% function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, tag_auralization, show )
 %
 % transform input transfer functions into FIR filters. The transfer functions (Hatm) come
 % from the ray tracing simulations, and incorporate the following propagation effects
@@ -106,6 +106,11 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   tag_auralization : string
 %           name to save the plots
 %
+%   show : logical (boolean), OPTIONAL (DEFAULT true)
+%           create the plots of the FIR filters (<PLOT_FIR>, <PLOT_FIR_spectrogram>).
+%           <apply_propagation> sets it only for the overall signal: the engine and airframe
+%           signals use the same (mono) filters, so their plots would be identical
+%
 %   OUTPUTS
 %
 %   OUT : struct
@@ -159,14 +164,21 @@ function OUT = get_FIR( input, fs, considerGroundReflection, binaural_signal, ta
 %   propagation delay for <doppler_method> = delay_line
 % Gil Felix Greco, Braunschweig 19.11.2026 - HRTF set selectable in the .ini file
 %   (<hrtf_database>: FABIAN or HUTUBS), HRIRs obtained with <get_hrir>
+% Gil Felix Greco, Braunschweig 25.11.2026 - plots only if <show> (new optional input); FFT of
+%   the atmospheric IRs computed once for both ears; unused IFFT of the combined transfer
+%   function removed (filters unchanged, bit-identical)
 %
-%   AI disclosure (11.11.2026, 14.11.2026, 16.11.2026 and 19.11.2026 changes): Generative AI assistance
+%   AI disclosure (11.11.2026, 14.11.2026, 16.11.2026, 19.11.2026 and 25.11.2026 changes): Generative AI assistance
 %   (Anthropic Claude) was used to develop this code under the author's direction. All
 %   codes were verified by the author.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 global input_file
+
+if nargin < 6 || isempty( show )
+    show = true; % DEFAULT (previous behaviour: plots always created)
+end
 
 if binaural_signal == 1
     head_orientation = get_head_orientation(); % <head_orientation> from <input_file>, DEFAULT 0
@@ -263,22 +275,20 @@ if considerGroundReflection == 1
 
     for i = 1:numTimeSteps
         TF_reflected(:,i) = transferFunction{i,1}.freq(:,2); % [nBins x nTimes]
-        TF_combined(:,i) = transferFunction{i,1}.freq(:,3); % only for comparison
+        TF_combined(:,i) = transferFunction{i,1}.freq(:,3); % only for comparison (plots)
     end
 
     % create double-sided spectra and take its IFFT
 
     % declare variables
     TF_reflected_double_sided = zeros( numFreqBins_double_sided, numTimeSteps );
-    TF_combined_double_sided = zeros( numFreqBins_double_sided, numTimeSteps );
 
     for i = 1:numTimeSteps % loop over time steps
         TF_reflected_double_sided(:,i) =  [TF_reflected(:,i); conj(flipud(TF_reflected(2:end-1,i)))];
-        TF_combined_double_sided(:,i) =  [TF_combined(:,i); conj(flipud(TF_combined(2:end-1,i)))];
     end
 
     impulseResponse_reflected  = ifft(TF_reflected_double_sided, 'symmetric');
-    impulseResponse_combined  = ifft(TF_combined_double_sided, 'symmetric');
+    % (the IR of the combined transfer function was computed here until 25.11.2026, but never used)
 
     % decorrelated reflected IRs (turbulence-induced coherence loss)
     if applyCoherenceLoss
@@ -420,8 +430,11 @@ if binaural_signal == 1
     HRIR_direct_rightEar_padded = [HRIR_direct.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
     % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
-    impulseResponse_direct_binaural_leftEar = ifft( fft(atm_IR_direct_padded) .* fft( HRIR_direct_leftEar_padded ), 'symmetric' );
-    impulseResponse_direct_binaural_rightEar = ifft( fft(atm_IR_direct_padded) .* fft( HRIR_direct_rightEar_padded ), 'symmetric' );
+    % (FFT of the atmospheric IRs computed once for both ears)
+    atm_TF_direct_padded = fft(atm_IR_direct_padded);
+    impulseResponse_direct_binaural_leftEar = ifft( atm_TF_direct_padded .* fft( HRIR_direct_leftEar_padded ), 'symmetric' );
+    impulseResponse_direct_binaural_rightEar = ifft( atm_TF_direct_padded .* fft( HRIR_direct_rightEar_padded ), 'symmetric' );
+    clear atm_TF_direct_padded
 
     % reflected path
     if considerGroundReflection == 1
@@ -453,8 +466,11 @@ if binaural_signal == 1
         HRIR_reflected_rightEar_padded = [HRIR_reflected.rightEar; zeros(numFreqBins_double_sided - 1, numTimeSteps)];
 
         % get binaural impulse responses (i.e. atmospheric effects + HRTFs)
-        impulseResponse_reflected_binaural_leftEar = ifft( fft(atm_IR_reflected_padded) .* fft( HRIR_reflected_leftEar_padded ), 'symmetric' );
-        impulseResponse_reflected_binaural_rightEar = ifft( fft(atm_IR_reflected_padded) .* fft( HRIR_reflected_rightEar_padded), 'symmetric' );
+        % (FFT of the atmospheric IRs computed once for both ears)
+        atm_TF_reflected_padded = fft(atm_IR_reflected_padded);
+        impulseResponse_reflected_binaural_leftEar = ifft( atm_TF_reflected_padded .* fft( HRIR_reflected_leftEar_padded ), 'symmetric' );
+        impulseResponse_reflected_binaural_rightEar = ifft( atm_TF_reflected_padded .* fft( HRIR_reflected_rightEar_padded), 'symmetric' );
+        clear atm_TF_reflected_padded
 
     end
 end
@@ -522,7 +538,11 @@ end
 
 tBlock = round(numTimeSteps/2); % a time bin to plot the freq response of the FIR filter
 
-if useDelayLine
+if ~show
+
+    % no plots (see input <show>)
+
+elseif useDelayLine
 
     % filters of each path (without propagation delay): magnitude compared with the
     % transfer function of the same path

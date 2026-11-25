@@ -1,6 +1,26 @@
 ++ unreleased: all changes since v1.0 (22.09.2025), newest first
 
 ---------------------------------------------------------------------------------------------------------------------------------------
+++ 25.11.2026 - computation time (small changes, results unchanged)
+
+PERFORMANCE
+
+- <tonalSynthesis>: each tone interpolated and synthesized in one loop, instead of storing the envelopes of all tones in
+  matrices grown row by row (201 buzzsaw tones, 20 s: approx. 30 s and 4.6 GB less per receiver; only if all buzzsaw tones
+  are synthesized, i.e. 1st tone >= 20 dB SPL, see <getTonalInput>; approach example: 1 tone, no gain). The printed
+  synthesis time now includes the interpolation
+- <PLOT_spectrogram>, <PLOT_spectrogram_difference>: spectrogram computed with one FFT of all frames instead of growing the
+  matrix in a loop (approx. 19 s -> < 0.1 s per channel for 20 s of signal; approx. 14 channels per receiver with save_figs = 1)
+- <get_FIR>: FIR plots only for the overall signal (identical for engine/airframe, were overwritten) and only if figures
+  are created (new optional input show); FFT of the atmospheric IRs computed once for both ears; unused IFFT removed
+- <export_figures>: figures saved with 300 dpi instead of 600 dpi (faster export, smaller .png files)
+
+CHANGES IN RESULTS
+
+- none (bit-identical .wav files with rng('default'))
+- homogeneous approach example (1 receiver, binaural + DF/FF, save_figs = 1): 53 s -> 37 s
+
+---------------------------------------------------------------------------------------------------------------------------------------
 ++ 19.11.2026 - HUTUBS HRTF database (optional)
 
 NEW FEATURES
